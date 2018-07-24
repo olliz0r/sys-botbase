@@ -5,7 +5,7 @@ This is an open-source cheat-engine for the nintendo switch.
 It requires a hacked switch (with hekate as the bootloader).
 
 To use this first add `fullsvcperm=1` and `debugmode=1` to your `hekate_ipl.ini`.  
-After that move the sys-netcheat.kip from the [release](https://github.com/jakibaki/sys-netcheat/releases/) to the modules-folder of your sdcard and add the line `kip1=modules/sys-netcheat.kip` to the `hekate_ipl.ini` as well.
+After that move the `sys-netcheat.kip` from the [release](https://github.com/jakibaki/sys-netcheat/releases/) to the `modules`-folder of your sdcard and add the line `kip1=modules/sys-netcheat.kip` to the `hekate_ipl.ini` as well.
 
 Please keep in mind that at this point this will **not** work if layeredfs is enabled!
 
@@ -29,6 +29,8 @@ Commands:
     csearch value              | Searches the hits of the last search for the new value
     poke address u32/u64 value | Sets the memory at address to value
 ```
+
+---
 
 As an example I'll show you how to change the number of bananas in botw (the values will be different for you!)
 
