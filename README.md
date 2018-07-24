@@ -4,8 +4,8 @@ This is an open-source cheat-engine for the nintendo switch.
 
 It requires a hacked switch (with hekate as the bootloader).
 
-To use this first add `fullsvcperm=1` and `debugmode=1` to your 'hekate_ipl.ini'.  
-After that move the sys-netcheat.kip from the [release](https://github.com/jakibaki/sys-netcheat/releases/) to the modules-folder of your sdcard and add the line `kip1=modules/sys-netcheat.kip` to the 'hekate_ipl.ini' as well.
+To use this first add `fullsvcperm=1` and `debugmode=1` to your `hekate_ipl.ini`.  
+After that move the sys-netcheat.kip from the [release](https://github.com/jakibaki/sys-netcheat/releases/) to the modules-folder of your sdcard and add the line `kip1=modules/sys-netcheat.kip` to the `hekate_ipl.ini` as well.
 
 Please keep in mind that at this point this will **not** work if layeredfs is enabled!
 
