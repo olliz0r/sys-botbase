@@ -85,6 +85,8 @@ Handle debughandle = 0;
 enum
 {
     SEARCH_NONE,
+    SEARCH_U8,
+    SEARCH_U16,
     SEARCH_U32,
     SEARCH_U64
 };
@@ -107,7 +109,8 @@ int attach()
     if (R_FAILED(rc))
     {
         printf("Couldn't open the process (Error: %x)\n"
-               "Make sure that you actually started a game.\n", rc);
+               "Make sure that you actually started a game.\n",
+               rc);
         return 1;
     }
     return 0;
@@ -135,9 +138,21 @@ int argmain(int argc, char **argv)
         if (argc != 3)
             goto help;
 
+        u8 u8query = 0;
+        u16 u16query = 0;
         u32 u32query = 0;
         u64 u64query = 0;
 
+        if (!strcmp(argv[1], "u8"))
+        {
+            search = SEARCH_U8;
+            u8query = strtoul(argv[2], NULL, 10);
+        }
+        if (!strcmp(argv[1], "u16"))
+        {
+            search = SEARCH_U16;
+            u16query = strtoul(argv[2], NULL, 10);
+        }
         if (!strcmp(argv[1], "u32"))
         {
             search = SEARCH_U32;
@@ -177,6 +192,33 @@ int argmain(int argc, char **argv)
 
                     svcReadDebugProcessMemory(outbuf, debughandle, curaddr, chunksize);
 
+
+                    if (search == SEARCH_U8)
+                    {
+                        u8 *u8buf = (u8 *)outbuf;
+                        for (u64 i = 0; i < chunksize / sizeof(u8); i++)
+                        {
+                            if (u8buf[i] == u8query && searchSize < SEARCH_ARR_SIZE)
+                            {
+                                printf("Got a hit at %lx!\n", curaddr + i * sizeof(u8));
+                                searchArr[searchSize++] = curaddr + i * sizeof(u8);
+                            }
+                        }
+                    }
+
+                    if (search == SEARCH_U16)
+                    {
+                        u16 *u16buf = (u16 *)outbuf;
+                        for (u64 i = 0; i < chunksize / sizeof(u16); i++)
+                        {
+                            if (u16buf[i] == u16query && searchSize < SEARCH_ARR_SIZE)
+                            {
+                                printf("Got a hit at %lx!\n", curaddr + i * sizeof(u16));
+                                searchArr[searchSize++] = curaddr + i * sizeof(u16);
+                            }
+                        }
+                    }
+
                     if (search == SEARCH_U32)
                     {
                         u32 *u32buf = (u32 *)outbuf;
@@ -207,7 +249,8 @@ int argmain(int argc, char **argv)
                 }
             }
         } while (lastaddr < meminfo.addr + meminfo.size && searchSize < SEARCH_ARR_SIZE);
-        if(searchSize >= SEARCH_ARR_SIZE) {
+        if (searchSize >= SEARCH_ARR_SIZE)
+        {
             printf("There might be more after this, try getting the variable to a number that's less 'common'\n");
         }
         free(outbuf);
@@ -225,9 +268,20 @@ int argmain(int argc, char **argv)
             return 0;
         }
 
+        u8 u8NewVal = 0;
+        u16 u16NewVal = 0;
         u32 u32NewVal = 0;
         u64 u64NewVal = 0;
-        if (search == SEARCH_U32)
+
+        if (search == SEARCH_U8)
+        {
+            u8NewVal = strtoul(argv[1], NULL, 10);
+        }
+        else if (search == SEARCH_U16)
+        {
+            u16NewVal = strtoul(argv[1], NULL, 10);
+        }
+        else if (search == SEARCH_U32)
         {
             u32NewVal = strtoul(argv[1], NULL, 10);
         }
@@ -239,6 +293,26 @@ int argmain(int argc, char **argv)
         u64 newSearchSize = 0;
         for (int i = 0; i < searchSize; i++)
         {
+            if (search == SEARCH_U8)
+            {
+                u8 val;
+                svcReadDebugProcessMemory(&val, debughandle, searchArr[i], sizeof(u8));
+                if (val == u8NewVal)
+                {
+                    printf("Got a hit at %lx!\n", searchArr[i]);
+                    searchArr[newSearchSize++] = searchArr[i];
+                }
+            }
+            if (search == SEARCH_U16)
+            {
+                u16 val;
+                svcReadDebugProcessMemory(&val, debughandle, searchArr[i], sizeof(u16));
+                if (val == u16NewVal)
+                {
+                    printf("Got a hit at %lx!\n", searchArr[i]);
+                    searchArr[newSearchSize++] = searchArr[i];
+                }
+            }
             if (search == SEARCH_U32)
             {
                 u32 val;
@@ -272,6 +346,16 @@ int argmain(int argc, char **argv)
 
         u64 addr = strtoull(argv[1], NULL, 16);
 
+        if (!strcmp(argv[2], "u8"))
+        {
+            u8 val = strtoul(argv[3], NULL, 10);
+            svcWriteDebugProcessMemory(debughandle, &val, addr, sizeof(u8));
+        }
+        if (!strcmp(argv[2], "u32"))
+        {
+            u16 val = strtoul(argv[3], NULL, 10);
+            svcWriteDebugProcessMemory(debughandle, &val, addr, sizeof(u16));
+        }
         if (!strcmp(argv[2], "u32"))
         {
             u32 val = strtoul(argv[3], NULL, 10);
@@ -289,15 +373,16 @@ int argmain(int argc, char **argv)
 
 help:
     printf("Commands:\n"
-           "    help                       | Shows this text\n"
-           "    ssearch u32/u64 value      | Starts a search with 'value' as the starting-value\n"
-           "    csearch value              | Searches the hits of the last search for the new value\n"
-           "    poke address u32/u64 value | Sets the memory at address to value\n");
+           "    help                              | Shows this text\n"
+           "    ssearch u8/u16/u32/u64 value      | Starts a search with 'value' as the starting-value\n"
+           "    csearch value                     | Searches the hits of the last search for the new value\n"
+           "    poke address u8/u16/u32/u64 value | Sets the memory at address to value\n");
     return 0;
 }
 
 int main()
 {
+    // TODO: The ifs for the u8/u16/u32/u64 are ugly af.
 
     int listenfd = setupServerSocket();
 
@@ -306,9 +391,11 @@ int main()
     int c = sizeof(struct sockaddr_in);
     struct sockaddr_in client;
 
-    while (appletMainLoop()) {
-        sock = accept(listenfd, (struct sockaddr *)&client, (socklen_t*)&c);
-        if(sock <= 0) {
+    while (appletMainLoop())
+    {
+        sock = accept(listenfd, (struct sockaddr *)&client, (socklen_t *)&c);
+        if (sock <= 0)
+        {
             // Accepting fails after sleep for some reason.
             svcSleepThread(1e+9L);
             close(listenfd);
@@ -329,7 +416,8 @@ int main()
             write(sock, "> ", 2);
 
             int len = recv(sock, linebuf, MAX_LINE_LENGTH, 0);
-            if(len < 1) {
+            if (len < 1)
+            {
                 break;
             }
 
@@ -339,7 +427,7 @@ int main()
                 continue;
 
             parseArgs(linebuf, &argmain);
-            
+
             detach();
 
             svcSleepThread(1e+7L);
@@ -349,6 +437,6 @@ int main()
 
     if (debughandle != 0)
         svcCloseHandle(debughandle);
-    
+
     return 0;
 }

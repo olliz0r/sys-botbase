@@ -26,10 +26,10 @@ Welcome to netcheat!
 This needs fullsvcperm=1 and debugmode=1 set in your hekate-config!
 > help
 Commands:
-    help                       | Shows this text
-    ssearch u32/u64 value      | Starts a search with 'value' as the starting-value
-    csearch value              | Searches the hits of the last search for the new value
-    poke address u32/u64 value | Sets the memory at address to value
+    help                              | Shows this text
+    ssearch u8/u16/u32/u64 value      | Starts a search with 'value' as the starting-value
+    csearch value                     | Searches the hits of the last search for the new value
+    poke address u8/u16/u32/u64 value | Sets the memory at address to value
 ```
 
 ---
