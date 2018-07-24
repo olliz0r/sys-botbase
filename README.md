@@ -15,12 +15,7 @@ After installing simply boot your switch, start a game/homebrew and run
 nc IP_OF_YOUR_SWITCH 5555
 ```
 
-or
-
-```
-telnet IP_OF_YOUR_SWITCH 5555
-```
-on your computer.
+on your computer. You can find a windows version [here](https://eternallybored.org/misc/netcat/) (untested).
 
 You'll be greeted by this:
 
