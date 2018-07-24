@@ -1,5 +1,7 @@
 # sys-netcheat
 
+## Don't use this for online games! It'll ruin the experience for others and will probably get your switch banned in the process!
+
 This is an open-source cheat-engine for the nintendo switch.
 
 It requires a hacked switch (with hekate as the bootloader).
