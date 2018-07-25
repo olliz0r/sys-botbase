@@ -93,7 +93,7 @@ enum
 char *valtypes[] = {"none", "u8", "u16", "u32", "u64"};
 
 int search = VAL_NONE;
-#define SEARCH_ARR_SIZE 200000
+#define SEARCH_ARR_SIZE 1000000
 u64 searchArr[SEARCH_ARR_SIZE];
 int searchSize;
 
