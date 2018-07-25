@@ -69,3 +69,19 @@ Now we'll poke the values to find the one that we actually want and check if any
 The last one was the one we wanted!
 
 ![screeshot](/screenshot.jpg?raw=true)
+
+We want to make sure that we never suffer from a lack of bananas again! So we'll freeze the value!
+
+```
+> afreeze 3456a577d8 u32 500
+> lfreeze
+0) 3456a577d8 (u32) = 500
+```
+
+If we want to unfreeze the value we just need to run
+
+```
+> dfreeze 0
+```
+
+And the value will be unfrozen.
