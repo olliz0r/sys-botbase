@@ -19,7 +19,7 @@ extern int searchSize;
 int attach();
 void detach();
 
-int poke(char* type, u64 addr, u64 val);
+void poke(int valSize, u64 addr, u64 val);
 u64 peek(u64 addr);
 
 int startSearch(u64 val, u32 valType, u32 memtype);

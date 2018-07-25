@@ -37,34 +37,9 @@ void detach()
     debughandle = 0;
 }
 
-int poke(char *type, u64 addr, u64 val)
+void poke(int valSize, u64 addr, u64 val)
 {
-
-    if (!strcmp(type, "u8"))
-    {
-        u8 realval = (u8)val;
-        svcWriteDebugProcessMemory(debughandle, &realval, addr, sizeof(u8));
-    }
-    else if (!strcmp(type, "u16"))
-    {
-        u16 realval = (u16)val;
-        svcWriteDebugProcessMemory(debughandle, &realval, addr, sizeof(u16));
-    }
-    else if (!strcmp(type, "u32"))
-    {
-        u32 realval = (u32)val;
-        svcWriteDebugProcessMemory(debughandle, &realval, addr, sizeof(u32));
-    }
-    else if (!strcmp(type, "u64"))
-    {
-        u64 realval = val;
-        svcWriteDebugProcessMemory(debughandle, &realval, addr, sizeof(u64));
-    }
-    else
-    {
-        return 1;
-    }
-    return 0;
+    svcWriteDebugProcessMemory(debughandle, &val, addr, valSize);
 }
 
 u64 peek(u64 addr)
@@ -215,7 +190,7 @@ void freezeLoop()
                 break;
             }
 
-            poke(valtypes[freezeTypes[i]], freezeAddrs[i], freezeVals[i]);
+            poke(pow(2, freezeTypes[i] - 1), freezeAddrs[i], freezeVals[i]);
 
             detach();
         }

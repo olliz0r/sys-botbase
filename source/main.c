@@ -5,6 +5,7 @@
 #include <sys/errno.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <math.h>
 #include <switch.h>
 #include "cheat.h"
 #include "args.h"
@@ -157,9 +158,16 @@ int argmain(int argc, char **argv)
             goto help;
         u64 addr = strtoull(argv[1], NULL, 16);
         u64 val = strtoull(argv[3], NULL, 10);
-        if (poke(argv[2], addr, val))
+
+        int valType = VAL_NONE;
+        for (int i = 1; i < VAL_U64; i++)
+            if (!strcmp(argv[2], valtypes[i]))
+                valType = i;
+        if(valType == VAL_NONE)
             goto help;
 
+        poke(pow(2, valType-1), addr, val);
+        
         return 0;
     }
 
@@ -183,29 +191,16 @@ int argmain(int argc, char **argv)
         if (argc != 4)
             goto help;
         u64 addr = strtoull(argv[1], NULL, 16);
+        u64 val = strtoull(argv[3], NULL, 10);
 
-        if (!strcmp(argv[2], "u8"))
-        {
-            u8 val = strtoul(argv[3], NULL, 10);
-            freezeAdd(addr, VAL_U8, val);
-        }
-        else if (!strcmp(argv[2], "u16"))
-        {
-            u16 val = strtoul(argv[3], NULL, 10);
-            freezeAdd(addr, VAL_U16, val);
-        }
-        else if (!strcmp(argv[2], "u32"))
-        {
-            u32 val = strtoul(argv[3], NULL, 10);
-            freezeAdd(addr, VAL_U32, val);
-        }
-        else if (!strcmp(argv[2], "u64"))
-        {
-            u64 val = strtoull(argv[3], NULL, 10);
-            freezeAdd(addr, VAL_U64, val);
-        }
-        else
+        int valType = VAL_NONE;
+        for (int i = 1; i < VAL_U64; i++)
+            if (!strcmp(argv[2], valtypes[i]))
+                valType = i;
+        if(valType == VAL_NONE)
             goto help;
+
+        freezeAdd(addr, valType, val);
 
         return 0;
     }

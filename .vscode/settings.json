@@ -22,6 +22,8 @@
         "unistd.h": "c",
         "debug.h": "c",
         "util.h": "c",
-        "cheat.h": "c"
+        "cheat.h": "c",
+        "limits": "c",
+        "type_traits": "c"
     }
 }
