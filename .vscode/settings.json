@@ -19,6 +19,9 @@
         "args.h": "c",
         "errno.h": "c",
         "switch.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "debug.h": "c",
+        "util.h": "c",
+        "cheat.h": "c"
     }
 }
