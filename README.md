@@ -100,3 +100,8 @@ If we want to unfreeze the value we just need to run
 ```
 
 And the value will be unfrozen.
+
+## Additional information:
+
+For some reason this may result in installed games no longer launching if this is used in combination with sigpatches.  
+If that happens running the 'Delete Common Ticket' option from Tinfoil and then (force) rebooting fixes it.
