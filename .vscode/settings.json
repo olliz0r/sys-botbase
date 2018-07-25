@@ -17,6 +17,8 @@
         "stdarg.h": "c",
         "ftp.h": "c",
         "args.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "switch.h": "c",
+        "unistd.h": "c"
     }
 }

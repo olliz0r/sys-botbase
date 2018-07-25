@@ -9,6 +9,11 @@
 #include "args.h"
 #include "util.h"
 
+//TODO: Attach/Detach mutext
+//TODO: freeze mutext
+//TODO: freeze cmds
+//TODO: Start thread
+
 #define TITLE_ID 0x420000000000000F
 #define HEAP_SIZE 0x000540000
 
@@ -84,22 +89,27 @@ void __appExit(void)
 Handle debughandle = 0;
 enum
 {
-    SEARCH_NONE,
-    SEARCH_U8,
-    SEARCH_U16,
-    SEARCH_U32,
-    SEARCH_U64
+    VAL_NONE,
+    VAL_U8,
+    VAL_U16,
+    VAL_U32,
+    VAL_U64
 };
+char *valtypes[] = {"none", "u8", "u16", "u32", "u64"};
 
-int search = SEARCH_NONE;
+int search = VAL_NONE;
 #define SEARCH_ARR_SIZE 200000
 u64 searchArr[SEARCH_ARR_SIZE];
 int searchSize;
 
 int sock = -1;
 
+static Mutex actionLock;
+
 int attach()
 {
+    if (debughandle != 0)
+        svcCloseHandle(debughandle);
     u64 pids[300];
     u32 numProc;
     svcGetProcessList(&numProc, pids, 300);
@@ -121,6 +131,90 @@ void detach()
     if (debughandle != 0)
         svcCloseHandle(debughandle);
     debughandle = 0;
+}
+
+#define FREEZE_LIST_LEN 100
+u64 freezeAddrs[FREEZE_LIST_LEN];
+int freezeTypes[FREEZE_LIST_LEN];
+u64 freezeVals[FREEZE_LIST_LEN];
+int numFreezes = 0;
+
+void freezeList()
+{
+    for (int i = 0; i < numFreezes; i++)
+    {
+        printf("%d) %lx (%s) = %ld\r\n", i, freezeAddrs[i], valtypes[freezeTypes[i]], freezeVals[i]);
+    }
+}
+
+void freezeAdd(u64 addr, int type, u64 value)
+{
+    if (numFreezes >= FREEZE_LIST_LEN)
+    {
+        printf("Can't add any more frozen values!\r\n"
+               "Please remove some of the old ones!\r\n");
+    }
+    freezeAddrs[numFreezes] = addr;
+    freezeTypes[numFreezes] = type;
+    freezeVals[numFreezes] = value;
+    numFreezes++;
+}
+
+void freezeDel(int index)
+{
+    if(numFreezes <= index) {
+        printf("That number doesn't exit!");
+    }
+    numFreezes--;
+    for (int i = index; i < numFreezes; i++)
+    {
+        freezeAddrs[i] = freezeAddrs[i + 1];
+        freezeTypes[i] = freezeTypes[i + 1];
+        freezeVals[i] = freezeVals[i + 1];
+    }
+}
+
+void freezeLoop()
+{
+    while (1)
+    {
+        mutexLock(&actionLock);
+        for (int i = 0; i < numFreezes; i++)
+        {
+            if (attach())
+            {
+                printf("The process apparently died. Cleaning the freezes up!\r\n");
+                while (numFreezes > 0)
+                {
+                    freezeDel(0);
+                }
+                break;
+            }
+            if (freezeTypes[i] == VAL_U8)
+            {
+                u8 val = (u8)freezeVals[i];
+                svcWriteDebugProcessMemory(debughandle, &val, freezeAddrs[i], sizeof(u8));
+            }
+            else if (freezeTypes[i] == VAL_U16)
+            {
+                u16 val = (u16)freezeVals[i];
+                svcWriteDebugProcessMemory(debughandle, &val, freezeAddrs[i], sizeof(u16));
+            }
+            else if (freezeTypes[i] == VAL_U32)
+            {
+                u32 val = (u32)freezeVals[i];
+                svcWriteDebugProcessMemory(debughandle, &val, freezeAddrs[i], sizeof(u32));
+            }
+            else if (freezeTypes[i] == VAL_U64)
+            {
+                u64 val = (u64)freezeVals[i];
+                svcWriteDebugProcessMemory(debughandle, &val, freezeAddrs[i], sizeof(u64));
+            }
+            detach();
+        }
+        mutexUnlock(&actionLock);
+        svcSleepThread(5e+8L);
+    }
 }
 
 int argmain(int argc, char **argv)
@@ -145,22 +239,22 @@ int argmain(int argc, char **argv)
 
         if (!strcmp(argv[1], "u8"))
         {
-            search = SEARCH_U8;
+            search = VAL_U8;
             u8query = strtoul(argv[2], NULL, 10);
         }
         else if (!strcmp(argv[1], "u16"))
         {
-            search = SEARCH_U16;
+            search = VAL_U16;
             u16query = strtoul(argv[2], NULL, 10);
         }
         else if (!strcmp(argv[1], "u32"))
         {
-            search = SEARCH_U32;
+            search = VAL_U32;
             u32query = strtoul(argv[2], NULL, 10);
         }
         else if (!strcmp(argv[1], "u64"))
         {
-            search = SEARCH_U64;
+            search = VAL_U64;
             u64query = strtoull(argv[2], NULL, 10);
         }
         else
@@ -192,8 +286,7 @@ int argmain(int argc, char **argv)
 
                     svcReadDebugProcessMemory(outbuf, debughandle, curaddr, chunksize);
 
-
-                    if (search == SEARCH_U8)
+                    if (search == VAL_U8)
                     {
                         u8 *u8buf = (u8 *)outbuf;
                         for (u64 i = 0; i < chunksize / sizeof(u8); i++)
@@ -206,7 +299,7 @@ int argmain(int argc, char **argv)
                         }
                     }
 
-                    if (search == SEARCH_U16)
+                    if (search == VAL_U16)
                     {
                         u16 *u16buf = (u16 *)outbuf;
                         for (u64 i = 0; i < chunksize / sizeof(u16); i++)
@@ -219,7 +312,7 @@ int argmain(int argc, char **argv)
                         }
                     }
 
-                    if (search == SEARCH_U32)
+                    if (search == VAL_U32)
                     {
                         u32 *u32buf = (u32 *)outbuf;
                         for (u64 i = 0; i < chunksize / sizeof(u32); i++)
@@ -232,7 +325,7 @@ int argmain(int argc, char **argv)
                         }
                     }
 
-                    if (search == SEARCH_U64)
+                    if (search == VAL_U64)
                     {
                         u64 *u64buf = (u64 *)outbuf;
                         for (u64 i = 0; i < chunksize / sizeof(u64); i++)
@@ -262,7 +355,7 @@ int argmain(int argc, char **argv)
     {
         if (argc != 2)
             goto help;
-        if (search == SEARCH_NONE)
+        if (search == VAL_NONE)
         {
             printf("You need to start a search first!");
             return 0;
@@ -273,19 +366,19 @@ int argmain(int argc, char **argv)
         u32 u32NewVal = 0;
         u64 u64NewVal = 0;
 
-        if (search == SEARCH_U8)
+        if (search == VAL_U8)
         {
             u8NewVal = strtoul(argv[1], NULL, 10);
         }
-        else if (search == SEARCH_U16)
+        else if (search == VAL_U16)
         {
             u16NewVal = strtoul(argv[1], NULL, 10);
         }
-        else if (search == SEARCH_U32)
+        else if (search == VAL_U32)
         {
             u32NewVal = strtoul(argv[1], NULL, 10);
         }
-        else if (search == SEARCH_U64)
+        else if (search == VAL_U64)
         {
             u64NewVal = strtoull(argv[1], NULL, 10);
         }
@@ -293,7 +386,7 @@ int argmain(int argc, char **argv)
         u64 newSearchSize = 0;
         for (int i = 0; i < searchSize; i++)
         {
-            if (search == SEARCH_U8)
+            if (search == VAL_U8)
             {
                 u8 val;
                 svcReadDebugProcessMemory(&val, debughandle, searchArr[i], sizeof(u8));
@@ -303,7 +396,7 @@ int argmain(int argc, char **argv)
                     searchArr[newSearchSize++] = searchArr[i];
                 }
             }
-            if (search == SEARCH_U16)
+            if (search == VAL_U16)
             {
                 u16 val;
                 svcReadDebugProcessMemory(&val, debughandle, searchArr[i], sizeof(u16));
@@ -313,7 +406,7 @@ int argmain(int argc, char **argv)
                     searchArr[newSearchSize++] = searchArr[i];
                 }
             }
-            if (search == SEARCH_U32)
+            if (search == VAL_U32)
             {
                 u32 val;
                 svcReadDebugProcessMemory(&val, debughandle, searchArr[i], sizeof(u32));
@@ -323,7 +416,7 @@ int argmain(int argc, char **argv)
                     searchArr[newSearchSize++] = searchArr[i];
                 }
             }
-            if (search == SEARCH_U64)
+            if (search == VAL_U64)
             {
                 u64 val;
                 svcReadDebugProcessMemory(&val, debughandle, searchArr[i], sizeof(u64));
@@ -343,7 +436,6 @@ int argmain(int argc, char **argv)
     {
         if (argc != 4)
             goto help;
-
         u64 addr = strtoull(argv[1], NULL, 16);
 
         if (!strcmp(argv[2], "u8"))
@@ -351,7 +443,7 @@ int argmain(int argc, char **argv)
             u8 val = strtoul(argv[3], NULL, 10);
             svcWriteDebugProcessMemory(debughandle, &val, addr, sizeof(u8));
         }
-        else if (!strcmp(argv[2], "u32"))
+        else if (!strcmp(argv[2], "u16"))
         {
             u16 val = strtoul(argv[3], NULL, 10);
             svcWriteDebugProcessMemory(debughandle, &val, addr, sizeof(u16));
@@ -371,12 +463,62 @@ int argmain(int argc, char **argv)
         return 0;
     }
 
+    if (!strcmp(argv[0], "lfreeze"))
+    {
+        freezeList();
+        return 0;
+    }
+
+    if (!strcmp(argv[0], "dfreeze"))
+    {
+        if (argc != 2)
+            goto help;
+        u32 index = strtoul(argv[1], NULL, 10);
+        freezeDel(index);
+        return 0;
+    }
+
+    if (!strcmp(argv[0], "afreeze"))
+    {
+        if (argc != 4)
+            goto help;
+        u64 addr = strtoull(argv[1], NULL, 16);
+
+        if (!strcmp(argv[2], "u8"))
+        {
+            u8 val = strtoul(argv[3], NULL, 10);
+            freezeAdd(addr, VAL_U8, val);
+        }
+        else if (!strcmp(argv[2], "u16"))
+        {
+            u16 val = strtoul(argv[3], NULL, 10);
+            freezeAdd(addr, VAL_U16, val);
+        }
+        else if (!strcmp(argv[2], "u32"))
+        {
+            u32 val = strtoul(argv[3], NULL, 10);
+            freezeAdd(addr, VAL_U32, val);
+        }
+        else if (!strcmp(argv[2], "u64"))
+        {
+            u64 val = strtoull(argv[3], NULL, 10);
+            freezeAdd(addr, VAL_U64, val);
+        }
+        else
+            goto help;
+        
+        return 0;
+    }
+
 help:
     printf("Commands:\r\n"
-           "    help                              | Shows this text\r\n"
-           "    ssearch u8/u16/u32/u64 value      | Starts a search with 'value' as the starting-value\r\n"
-           "    csearch value                     | Searches the hits of the last search for the new value\r\n"
-           "    poke address u8/u16/u32/u64 value | Sets the memory at address to value\r\n");
+           "    help                                 | Shows this text\r\n"
+           "    ssearch u8/u16/u32/u64 value         | Starts a search with 'value' as the starting-value\r\n"
+           "    csearch value                        | Searches the hits of the last search for the new value\r\n"
+           "    poke address u8/u16/u32/u64 value    | Sets the memory at address to value\r\n"
+           "    afreeze address u8/u16/u32/u64 value | Freezes the memory at address to value\r\n"
+           "    lfreeze                              | Lists all frozen values\r\n"
+           "    dfreeze index                        | Unfreezes the memory at index\r\n");
     return 0;
 }
 
@@ -390,6 +532,16 @@ int main()
 
     int c = sizeof(struct sockaddr_in);
     struct sockaddr_in client;
+
+    mutexInit(&actionLock);
+
+    Thread freezeThread;
+    Result rc = threadCreate(&freezeThread, freezeLoop, NULL, 0x4000, 49, 3);
+    if (R_FAILED(rc))
+        fatalLater(rc);
+    rc = threadStart(&freezeThread);
+    if (R_FAILED(rc))
+        fatalLater(rc);
 
     while (appletMainLoop())
     {
@@ -423,14 +575,18 @@ int main()
 
             linebuf[len - 1] = 0;
 
-            if (attach())
+            mutexLock(&actionLock);
+            if (attach()) {
+                mutexUnlock(&actionLock);
                 continue;
+            }
 
             parseArgs(linebuf, &argmain);
 
             detach();
+            mutexUnlock(&actionLock);
 
-            svcSleepThread(1e+7L);
+            svcSleepThread(1e+8L);
         }
         detach();
     }
