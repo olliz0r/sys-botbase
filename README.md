@@ -29,7 +29,7 @@ After installing simply boot your switch, start a game/homebrew and run
 nc IP_OF_YOUR_SWITCH 5555
 ```
 
-on your computer. You can find a windows version [here](https://eternallybored.org/misc/netcat/) (untested).
+in the terminal on your computer. You can find a windows version [here](https://eternallybored.org/misc/netcat/) (untested).
 
 You'll be greeted by this:
 
@@ -38,10 +38,13 @@ Welcome to netcheat!
 This needs fullsvcperm=1 and debugmode=1 set in your hekate-config!
 > help
 Commands:
-    help                              | Shows this text
-    ssearch u8/u16/u32/u64 value      | Starts a search with 'value' as the starting-value
-    csearch value                     | Searches the hits of the last search for the new value
-    poke address u8/u16/u32/u64 value | Sets the memory at address to value
+    help                                 | Shows this text
+    ssearch u8/u16/u32/u64 value         | Starts a search with 'value' as the starting-value
+    csearch value                        | Searches the hits of the last search for the new value
+    poke address u8/u16/u32/u64 value    | Sets the memory at address to value
+    afreeze address u8/u16/u32/u64 value | Freezes the memory at address to value
+    lfreeze                              | Lists all frozen values
+    dfreeze index                        | Unfreezes the memory at index
 ```
 
 ---
