@@ -2,6 +2,18 @@
 
 ## Don't use this for online games! It'll ruin the experience for others and will probably get your switch banned in the process!
 
+## Warning:
+
+For some reason this may result in installed games no longer launching if this is used in combination with sigpatches.  
+If that happens running the 'Delete Common Ticket' option from Tinfoil and then (force) rebooting fixes it **sometimes**.
+
+In at least one case running this with ReiNX (with sigpatches) resulted in all games on the storage being permanently corrupted!  
+Be **very** careful when trying out weird configurations.
+
+I am in no way responsible for any damage that may or may not happen to your switch!
+
+---
+
 This is an open-source cheat-engine for the nintendo switch.
 
 It requires a hacked switch (with hekate as the bootloader).
@@ -100,8 +112,3 @@ If we want to unfreeze the value we just need to run
 ```
 
 And the value will be unfrozen.
-
-## Additional information:
-
-For some reason this may result in installed games no longer launching if this is used in combination with sigpatches.  
-If that happens running the 'Delete Common Ticket' option from Tinfoil and then (force) rebooting fixes it.
