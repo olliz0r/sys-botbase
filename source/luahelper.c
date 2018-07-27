@@ -100,7 +100,7 @@ static int luaPoke(lua_State *L)
 
     if (valType == VAL_NONE)
     {
-        printf("WARNING: Trying to poke invalid/unsupported type\r\n");
+        luaL_error(L, "Error: Trying to poke invalid/unsupported type\r\n");
     }
 
     poke(valSizes[valType], addr, num);
@@ -119,6 +119,11 @@ static int luaGetRegionInfo(lua_State *L)
     for (int i = 1; i < MemType_CodeWritable; i++)
         if (!strcmp(type, memTypeStrings[i]))
             valType = i;
+    if(valType == MemType_Unmapped) {
+        luaL_error(L, "Invalid valType!");
+        goto end;
+    }
+
 
     int num = lua_tointeger(L, 2);
     MemoryInfo meminfo = getRegionOfType(num, valType);
@@ -126,25 +131,10 @@ static int luaGetRegionInfo(lua_State *L)
     lua_pushnumber(L, meminfo.addr);
     lua_pushnumber(L, meminfo.size);
 
+end:
     detach();
     mutexUnlock(&actionLock);
     return 2;
-}
-
-static int luaResetSearch(lua_State *L)
-{
-    mutexLock(&actionLock);
-    searchSize = 0;
-    mutexUnlock(&actionLock);
-    return 0;
-}
-
-static int luaSetSearchSize(lua_State *L)
-{
-    mutexLock(&actionLock);
-    searchSize = lua_tonumber(L, 1);
-    mutexUnlock(&actionLock);
-    return 0;
 }
 
 static int luaSearchSection(lua_State *L)
@@ -161,7 +151,7 @@ static int luaSearchSection(lua_State *L)
             regType = i;
     if (regType == MemType_Unmapped)
     {
-        printf("Invalid memory-type!\r\n");
+        luaL_error(L, "Invalid memory-type!\r\n");
         goto end;
     }
 
@@ -179,7 +169,7 @@ static int luaSearchSection(lua_State *L)
 
     if (valType == VAL_NONE)
     {
-        printf("Invalid value-type!\r\n");
+        luaL_error(L, "Invalid value-type!\r\n");
         goto end;
     }
 
@@ -210,7 +200,7 @@ static int luaStartSearch(lua_State *L)
             regType = i;
     if (regType == MemType_Unmapped)
     {
-        printf("Invalid memory-type!\r\n");
+        luaL_error(L, "Invalid memory-type!\r\n");
         goto end;
     }
 
@@ -225,7 +215,7 @@ static int luaStartSearch(lua_State *L)
 
     if (valType == VAL_NONE)
     {
-        printf("Invalid value-type!\r\n");
+        luaL_error(L, "Invalid value-type!\r\n");
         goto end;
     }
 
@@ -266,7 +256,7 @@ static int luaGetResult(lua_State *L)
     int index = lua_tonumber(L, 1);
     if (index >= searchSize || index < 0)
     {
-        printf("Tried to get result from invalid index\r\n");
+        luaL_error(L, "Tried to get result from invalid index\r\n");
         goto end;
     }
     u64 tmp_res = searchArr[index];
@@ -281,20 +271,47 @@ end:
 static int luaFreeze(lua_State *L)
 {
     mutexLock(&actionLock);
+    attach();
+    const char *type = lua_tostring(L, 1);
+    u64 addr = lua_tonumber(L, 2);
+    u64 num = lua_tonumber(L, 3);
+
+    int valType = VAL_NONE;
+    for (int i = 1; i < VAL_END; i++)
+        if (!strcmp(type, valtypes[i]))
+            valType = i;
+
+    if (valType == VAL_NONE)
+    {
+        luaL_error(L, "Trying to poke invalid/unsupported type\r\n");
+        goto end;
+    }
+
+    freezeAdd(addr, valType, num);
+end:
+    detach();
     mutexUnlock(&actionLock);
-    return 1;
+    return 0;
 }
 
 static int luaUnFreeze(lua_State *L)
 {
     mutexLock(&actionLock);
+    int index = lua_tonumber(L, 1);
+    if(index >= numFreezes || index < 0) {
+        luaL_error(L, "Trying to access invalid value!\r\n");
+        goto end;
+    }
+    freezeDel(index);
+end:
     mutexUnlock(&actionLock);
-    return 1;
+    return 0;
 }
 
 static int luaGetFreezeLength(lua_State *L)
 {
     mutexLock(&actionLock);
+    lua_pushnumber(L, numFreezes);
     mutexUnlock(&actionLock);
     return 1;
 }
@@ -302,6 +319,17 @@ static int luaGetFreezeLength(lua_State *L)
 static int luaGetFreeze(lua_State *L)
 {
     mutexLock(&actionLock);
+    int index = lua_tonumber(L, 1);
+    if(index >= numFreezes || index < 0) {
+        luaL_error(L, "Trying to access invalid value!\r\n");
+        goto end;
+    }
+
+    lua_pushstring(L, valtypes[freezeTypes[index]]);
+    lua_pushnumber(L, freezeAddrs[index]);
+    lua_pushnumber(L, freezeVals[index]);
+
+end:
     mutexUnlock(&actionLock);
     return 1;
 }
@@ -336,6 +364,36 @@ int luaRunPath(char *path)
 
     lua_pushcfunction(L, luaPoke);
     lua_setglobal(L, "poke");
+
+    lua_pushcfunction(L, luaGetRegionInfo);
+    lua_setglobal(L, "getRegionInfo");
+
+    lua_pushcfunction(L, luaSearchSection);
+    lua_setglobal(L, "searchSection");
+
+    lua_pushcfunction(L, luaStartSearch);
+    lua_setglobal(L, "startSearch");
+
+    lua_pushcfunction(L, luaContSearch);
+    lua_setglobal(L, "contSearch");
+
+    lua_pushcfunction(L, luaGetResultsLenght);
+    lua_setglobal(L, "getResultsLenght");
+
+    lua_pushcfunction(L, luaGetResult);
+    lua_setglobal(L, "getResult");
+
+    lua_pushcfunction(L, luaFreeze);
+    lua_setglobal(L, "freeze");
+
+    lua_pushcfunction(L, luaUnFreeze);
+    lua_setglobal(L, "unfreeze");
+
+    lua_pushcfunction(L, luaGetFreezeLength);
+    lua_setglobal(L, "getFreezeLenght");
+
+    lua_pushcfunction(L, luaGetFreeze);
+    lua_setglobal(L, "getFreeze");
 
     // TODO: Run in thread and terminate it if 'STOP'
 

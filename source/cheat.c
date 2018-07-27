@@ -81,6 +81,8 @@ int searchSize;
 
 int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize)
 {
+    searchSize = 0;
+    search = valType;
     int valSize = valSizes[valType];
     u64 off = 0;
 
@@ -88,7 +90,10 @@ int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bu
     {
         if (meminfo.size - off < bufSize)
             bufSize = meminfo.size - off;
-        svcReadDebugProcessMemory(buffer, debughandle, meminfo.addr + off, bufSize);
+        if(R_FAILED(svcReadDebugProcessMemory(buffer, debughandle, meminfo.addr + off, bufSize)))
+            return 0;
+        
+        
         for (u64 i = 0; i < bufSize; i += valSize)
         {
             if (!memcmp(buffer + i, &val, valSize))
@@ -155,7 +160,6 @@ int contSearch(u64 val)
     return 0;
 }
 
-#define FREEZE_LIST_LEN 100
 u64 freezeAddrs[FREEZE_LIST_LEN];
 int freezeTypes[FREEZE_LIST_LEN];
 u64 freezeVals[FREEZE_LIST_LEN];

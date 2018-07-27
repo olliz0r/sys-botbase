@@ -51,10 +51,19 @@ u64 peek(u64 addr);
 int startSearch(u64 val, u32 valType, u32 memtype);
 int contSearch(u64 val);
 
+
+#define FREEZE_LIST_LEN 100
+
 void freezeList();
 void freezeAdd(u64 addr, int type, u64 value);
 void freezeDel(int index);
 void freezeLoop();
+
+extern int numFreezes;
+extern u64 freezeAddrs[FREEZE_LIST_LEN];
+extern int freezeTypes[FREEZE_LIST_LEN];
+extern u64 freezeVals[FREEZE_LIST_LEN];
+
 
 MemoryInfo getRegionOfType(int index, u32 type);
 int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize);
