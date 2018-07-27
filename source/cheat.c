@@ -70,43 +70,8 @@ MemoryInfo getRegionOfType(int index, u32 type)
         }
     } while (lastaddr < meminfo.addr + meminfo.size);
     meminfo.addr = 0;
+    meminfo.size = 0;
     return meminfo;
-}
-
-u64 getPointerToAddr(int index, u64 addr)
-{
-#define SEARCH_CHUNK_SIZE 0x40000
-    u64 *buf = malloc(SEARCH_CHUNK_SIZE);
-    int curInd = 0;
-    u64 i = 0;
-    MemoryInfo codeRegion = getRegionOfType(i, MemType_CodeMutable);
-    while (codeRegion.addr != 0)
-    {
-        u64 off = 0;
-        while (off != codeRegion.size)
-        {
-            u64 chunkSize = SEARCH_CHUNK_SIZE;
-            if (off + chunkSize > codeRegion.size)
-                chunkSize = codeRegion.size - off;
-            svcReadDebugProcessMemory(buf, debughandle, codeRegion.addr + off, chunkSize);
-
-            for (u64 i = 0; i < chunkSize / sizeof(u64); i++)
-            {
-                if (buf[i] == addr && curInd++ == index)
-                {
-                    free(buf);
-                    return codeRegion.addr + off + i * sizeof(u64);
-                }
-            }
-
-            off += chunkSize;
-        }
-
-        codeRegion = getRegionOfType(i++, MemType_CodeMutable);
-    }
-
-    free(buf);
-    return 0;
 }
 
 int search = VAL_NONE;
@@ -118,6 +83,7 @@ int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bu
 {
     int valSize = valSizes[valType];
     u64 off = 0;
+
     while (off < meminfo.size)
     {
         if (meminfo.size - off < bufSize)
@@ -148,14 +114,14 @@ int startSearch(u64 val, u32 valType, u32 memtype)
     searchSize = 0;
 
     u64 lastaddr = 0;
-    void *outbuf = malloc(0x40000);
+    void *outbuf = malloc(SEARCH_CHUNK_SIZE);
 
     do
     {
         lastaddr = meminfo.addr;
         u32 pageinfo;
         svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, meminfo.addr + meminfo.size);
-        if (meminfo.type == memtype && searchSection(val, valType, meminfo, outbuf, 0x40000))
+        if (meminfo.type == memtype && searchSection(val, valType, meminfo, outbuf, SEARCH_CHUNK_SIZE))
         {
             free(outbuf);
             return 1;

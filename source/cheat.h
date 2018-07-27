@@ -1,4 +1,5 @@
 #include <switch.h>
+#define SEARCH_CHUNK_SIZE 0x40000
 
 extern Handle debughandle;
 enum
@@ -12,6 +13,29 @@ enum
 };
 static char *valtypes[] = {"none", "u8", "u16", "u32", "u64"};
 static int valSizes[] = {0, 1, 2, 4};
+
+static char *memTypeStrings[] = {"MemType_Unmapped",
+                                 "MemType_Io",
+                                 "MemType_Normal",
+                                 "MemType_CodeStatic",
+                                 "MemType_CodeMutable",
+                                 "MemType_Heap",
+                                 "MemType_SharedMem",
+                                 "MemType_WeirdMappedMem",
+                                 "MemType_ModuleCodeStatic",
+                                 "MemType_ModuleCodeMutable",
+                                 "MemType_IpcBuffer0",
+                                 "MemType_MappedMemory",
+                                 "MemType_ThreadLocal",
+                                 "MemType_TransferMemIsolated",
+                                 "MemType_TransferMem",
+                                 "MemType_ProcessMem",
+                                 "MemType_Reserved",
+                                 "MemType_IpcBuffer1",
+                                 "MemType_IpcBuffer3",
+                                 "MemType_KernelStack",
+                                 "MemType_CodeReadOnly",
+                                 "MemType_CodeWritable"};
 
 extern int search;
 #define SEARCH_ARR_SIZE 200000
@@ -33,4 +57,4 @@ void freezeDel(int index);
 void freezeLoop();
 
 MemoryInfo getRegionOfType(int index, u32 type);
-u64 getPointerToAddr(int index, u64 addr);
+int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize);

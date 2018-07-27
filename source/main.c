@@ -113,19 +113,18 @@ int argmain(int argc, char **argv)
 
         u64 val = strtoull(argv[2], NULL, 10);
 
-
         printf("Starting search, this might take a while...\r\n");
         int res = startSearch(val, searchType, MemType_Heap);
-    
-        for(int i = 0; i < 100 && i < searchSize; i++)
+
+        for (int i = 0; i < 100 && i < searchSize; i++)
             printf("Hit at %lx!\r\n", searchArr[i]);
 
-        if(searchSize > 100)
+        if (searchSize > 100)
             printf("...\r\n");
 
         if (res)
             printf("There are too many hits to process, try getting the variable to a number that's less 'common'\r\n");
-    
+
         return 0;
     }
 
@@ -144,10 +143,10 @@ int argmain(int argc, char **argv)
         newVal = strtoull(argv[1], NULL, 10);
         contSearch(newVal);
 
-        for(int i = 0; i < 100 && i < searchSize; i++)
+        for (int i = 0; i < 100 && i < searchSize; i++)
             printf("Hit at %lx!\r\n", searchArr[i]);
-        
-        if(searchSize > 100)
+
+        if (searchSize > 100)
             printf("...\r\n");
 
         return 0;
@@ -164,11 +163,11 @@ int argmain(int argc, char **argv)
         for (int i = 1; i < VAL_END; i++)
             if (!strcmp(argv[2], valtypes[i]))
                 valType = i;
-        if(valType == VAL_NONE)
+        if (valType == VAL_NONE)
             goto help;
 
         poke(valSizes[valType], addr, val);
-        
+
         return 0;
     }
 
@@ -198,7 +197,7 @@ int argmain(int argc, char **argv)
         for (int i = 1; i < VAL_END; i++)
             if (!strcmp(argv[2], valtypes[i]))
                 valType = i;
-        if(valType == VAL_NONE)
+        if (valType == VAL_NONE)
             goto help;
 
         freezeAdd(addr, valType, val);
@@ -210,7 +209,8 @@ int argmain(int argc, char **argv)
     {
         if (argc != 2)
             goto help;
-        if(luaRunPath(argv[1])) {
+        if (luaRunPath(argv[1]))
+        {
             printf("Something went wrong while trying to run the lua-script :/\r\n");
         }
         return 0;
@@ -261,7 +261,6 @@ int main()
             listenfd = setupServerSocket();
             continue;
         }
-
 
         fflush(stdout);
         dup2(sock, STDOUT_FILENO);
