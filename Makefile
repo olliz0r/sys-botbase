@@ -9,7 +9,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 
 TARGET		:=	sys-netcheat
 BUILD		:=	build
-SOURCES		:=	source
+SOURCES		:=	source source/lua
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
@@ -26,7 +26,7 @@ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= -lnx -lm `freetype-config --libs`
+LIBS	:= -lnx -lCurl -lm `freetype-config --libs`
 
 LIBDIRS	:= $(PORTLIBS) $(LIBNX)
 

@@ -10,6 +10,7 @@
 #include "cheat.h"
 #include "args.h"
 #include "util.h"
+#include "luahelper.h"
 
 #define TITLE_ID 0x420000000000000F
 #define HEAP_SIZE 0x000540000
@@ -101,7 +102,7 @@ int argmain(int argc, char **argv)
             goto help;
 
         int searchType = VAL_NONE;
-        for (int i = 1; i < VAL_U64; i++)
+        for (int i = 1; i < VAL_END; i++)
         {
             if (!strcmp(argv[1], valtypes[i]))
                 searchType = i;
@@ -160,13 +161,13 @@ int argmain(int argc, char **argv)
         u64 val = strtoull(argv[3], NULL, 10);
 
         int valType = VAL_NONE;
-        for (int i = 1; i < VAL_U64; i++)
+        for (int i = 1; i < VAL_END; i++)
             if (!strcmp(argv[2], valtypes[i]))
                 valType = i;
         if(valType == VAL_NONE)
             goto help;
 
-        poke(pow(2, valType-1), addr, val);
+        poke(valSizes[valType], addr, val);
         
         return 0;
     }
@@ -194,7 +195,7 @@ int argmain(int argc, char **argv)
         u64 val = strtoull(argv[3], NULL, 10);
 
         int valType = VAL_NONE;
-        for (int i = 1; i < VAL_U64; i++)
+        for (int i = 1; i < VAL_END; i++)
             if (!strcmp(argv[2], valtypes[i]))
                 valType = i;
         if(valType == VAL_NONE)
@@ -202,6 +203,16 @@ int argmain(int argc, char **argv)
 
         freezeAdd(addr, valType, val);
 
+        return 0;
+    }
+
+    if (!strcmp(argv[0], "luarun"))
+    {
+        if (argc != 2)
+            goto help;
+        if(luaRunPath(argv[1])) {
+            printf("Something went wrong while trying to run the lua-script :/\r\n");
+        }
         return 0;
     }
 
@@ -213,14 +224,13 @@ help:
            "    poke address u8/u16/u32/u64 value    | Sets the memory at address to value\r\n"
            "    afreeze address u8/u16/u32/u64 value | Freezes the memory at address to value\r\n"
            "    lfreeze                              | Lists all frozen values\r\n"
-           "    dfreeze index                        | Unfreezes the memory at index\r\n");
+           "    dfreeze index                        | Unfreezes the memory at index\r\n"
+           "    luarun path/url                      | Runs lua script at path or url (http:// only)\r\n");
     return 0;
 }
 
 int main()
 {
-    // TODO: The ifs for the u8/u16/u32/u64 are ugly af.
-
     int listenfd = setupServerSocket();
 
     char *linebuf = malloc(sizeof(char) * MAX_LINE_LENGTH);
@@ -229,6 +239,8 @@ int main()
     struct sockaddr_in client;
 
     mutexInit(&actionLock);
+
+    luaInit();
 
     Thread freezeThread;
     Result rc = threadCreate(&freezeThread, freezeLoop, NULL, 0x4000, 49, 3);
@@ -249,6 +261,7 @@ int main()
             listenfd = setupServerSocket();
             continue;
         }
+
 
         fflush(stdout);
         dup2(sock, STDOUT_FILENO);

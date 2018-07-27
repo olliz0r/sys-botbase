@@ -49,15 +49,98 @@ u64 peek(u64 addr)
     return out;
 }
 
+MemoryInfo getRegionOfType(int index, u32 type)
+{
+    MemoryInfo meminfo;
+    memset(&meminfo, 0, sizeof(MemoryInfo));
+
+    int curInd = 0;
+
+    u64 lastaddr;
+    do
+    {
+        lastaddr = meminfo.addr;
+        u32 pageinfo;
+        svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, meminfo.addr + meminfo.size);
+        if (meminfo.type == type)
+        {
+            if (curInd == index)
+                return meminfo;
+            curInd++;
+        }
+    } while (lastaddr < meminfo.addr + meminfo.size);
+    meminfo.addr = 0;
+    return meminfo;
+}
+
+u64 getPointerToAddr(int index, u64 addr)
+{
+#define SEARCH_CHUNK_SIZE 0x40000
+    u64 *buf = malloc(SEARCH_CHUNK_SIZE);
+    int curInd = 0;
+    u64 i = 0;
+    MemoryInfo codeRegion = getRegionOfType(i, MemType_CodeMutable);
+    while (codeRegion.addr != 0)
+    {
+        u64 off = 0;
+        while (off != codeRegion.size)
+        {
+            u64 chunkSize = SEARCH_CHUNK_SIZE;
+            if (off + chunkSize > codeRegion.size)
+                chunkSize = codeRegion.size - off;
+            svcReadDebugProcessMemory(buf, debughandle, codeRegion.addr + off, chunkSize);
+
+            for (u64 i = 0; i < chunkSize / sizeof(u64); i++)
+            {
+                if (buf[i] == addr && curInd++ == index)
+                {
+                    free(buf);
+                    return codeRegion.addr + off + i * sizeof(u64);
+                }
+            }
+
+            off += chunkSize;
+        }
+
+        codeRegion = getRegionOfType(i++, MemType_CodeMutable);
+    }
+
+    free(buf);
+    return 0;
+}
+
 int search = VAL_NONE;
 #define SEARCH_ARR_SIZE 200000
 u64 searchArr[SEARCH_ARR_SIZE];
 int searchSize;
 
+int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize)
+{
+    int valSize = valSizes[valType];
+    u64 off = 0;
+    while (off < meminfo.size)
+    {
+        if (meminfo.size - off < bufSize)
+            bufSize = meminfo.size - off;
+        svcReadDebugProcessMemory(buffer, debughandle, meminfo.addr + off, bufSize);
+        for (u64 i = 0; i < bufSize; i += valSize)
+        {
+            if (!memcmp(buffer + i, &val, valSize))
+            {
+                if (searchSize < SEARCH_ARR_SIZE)
+                    searchArr[searchSize++] = meminfo.addr + off + i;
+                else
+                    return 1;
+            }
+        }
+        off += bufSize;
+    }
+    return 0;
+}
+
 int startSearch(u64 val, u32 valType, u32 memtype)
 {
     search = valType;
-    int valSize = pow(2, valType - 1);
 
     MemoryInfo meminfo;
     memset(&meminfo, 0, sizeof(MemoryInfo));
@@ -72,45 +155,20 @@ int startSearch(u64 val, u32 valType, u32 memtype)
         lastaddr = meminfo.addr;
         u32 pageinfo;
         svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, meminfo.addr + meminfo.size);
-        if (meminfo.type == memtype)
+        if (meminfo.type == memtype && searchSection(val, valType, meminfo, outbuf, 0x40000))
         {
-            u64 curaddr = meminfo.addr;
-            u64 chunksize = 0x40000;
-
-            while (curaddr < meminfo.addr + meminfo.size)
-            {
-                if (curaddr + chunksize > meminfo.addr + meminfo.size)
-                {
-                    chunksize = meminfo.addr + meminfo.size - curaddr;
-                }
-
-                svcReadDebugProcessMemory(outbuf, debughandle, curaddr, chunksize);
-
-                for (u64 i = 0; i < chunksize; i += valSize)
-                {
-                    if (!memcmp(outbuf + i, &val, valSize) && searchSize < SEARCH_ARR_SIZE)
-                    {
-                        searchArr[searchSize++] = curaddr + i;
-                    }
-                }
-
-                curaddr += chunksize;
-            }
+            free(outbuf);
+            return 1;
         }
-    } while (lastaddr < meminfo.addr + meminfo.size && searchSize < SEARCH_ARR_SIZE);
-    if (searchSize >= SEARCH_ARR_SIZE)
-    {
-        return 1;
-    }
+    } while (lastaddr < meminfo.addr + meminfo.size);
 
     free(outbuf);
-
     return 0;
 }
 
 int contSearch(u64 val)
 {
-    int valSize = pow(2, search - 1);
+    int valSize = valSizes[search];
     int newSearchSize = 0;
     if (search == VAL_NONE)
     {
@@ -190,7 +248,7 @@ void freezeLoop()
                 break;
             }
 
-            poke(pow(2, freezeTypes[i] - 1), freezeAddrs[i], freezeVals[i]);
+            poke(valSizes[freezeTypes[i]], freezeAddrs[i], freezeVals[i]);
 
             detach();
         }

@@ -24,6 +24,9 @@
         "util.h": "c",
         "cheat.h": "c",
         "limits": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "lauxlib.h": "c",
+        "curl.h": "c",
+        "lua.h": "c"
     }
 }
