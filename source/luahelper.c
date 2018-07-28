@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <poll.h>
+
 #include <curl/curl.h>
 
 #include "cheat.h"
@@ -43,15 +45,20 @@ void luaInit()
     mkdir("/netcheat", 0700);
 }
 
+char *line;
+
 static int luaRecvLine(lua_State *L)
 {
-    char res[150];
-    int len = recv(sock, &res, 150, 0);
-    if (len <= 0)
-        res[0] = 0;
-    else
-        res[len - 1] = 0;
-    lua_pushstring(L, res);
+    mutexLock(&actionLock);
+    while (strlen(line) == 0)
+    {
+        mutexUnlock(&actionLock);
+        svcSleepThread(200000000);
+        mutexLock(&actionLock);
+    }
+    lua_pushstring(L, line);
+    line[0] = 0;
+    mutexUnlock(&actionLock);
     return 1;
 }
 
@@ -119,11 +126,11 @@ static int luaGetRegionInfo(lua_State *L)
     for (int i = 1; i < MemType_CodeWritable; i++)
         if (!strcmp(type, memTypeStrings[i]))
             valType = i;
-    if(valType == MemType_Unmapped) {
+    if (valType == MemType_Unmapped)
+    {
         luaL_error(L, "Invalid valType!");
         goto end;
     }
-
 
     int num = lua_tointeger(L, 2);
     MemoryInfo meminfo = getRegionOfType(num, valType);
@@ -298,7 +305,8 @@ static int luaUnFreeze(lua_State *L)
 {
     mutexLock(&actionLock);
     int index = lua_tonumber(L, 1);
-    if(index >= numFreezes || index < 0) {
+    if (index >= numFreezes || index < 0)
+    {
         luaL_error(L, "Trying to access invalid value!\r\n");
         goto end;
     }
@@ -320,7 +328,8 @@ static int luaGetFreeze(lua_State *L)
 {
     mutexLock(&actionLock);
     int index = lua_tonumber(L, 1);
-    if(index >= numFreezes || index < 0) {
+    if (index >= numFreezes || index < 0)
+    {
         luaL_error(L, "Trying to access invalid value!\r\n");
         goto end;
     }
@@ -332,6 +341,63 @@ static int luaGetFreeze(lua_State *L)
 end:
     mutexUnlock(&actionLock);
     return 1;
+}
+
+Semaphore done;
+
+char *runPath;
+void luaRunner(void *LState)
+{
+    lua_State *L = (lua_State *)LState;
+
+    int res = (luaL_loadfile(L, runPath) || lua_pcall(L, 0, 0, 0));
+    if (res)
+    {
+        printf("%s\r\n", lua_tostring(L, -1));
+    }
+    semaphoreSignal(&done);
+    semaphoreSignal(&done);
+    // Signal for both the poller and the main-thread;
+}
+
+void poller()
+{
+    struct pollfd fd;
+    fd.fd = sock;
+    fd.events = POLLIN;
+    int ret;
+
+    while (!semaphoreTryWait(&done))
+    {
+        ret = poll(&fd, 1, 200);
+        mutexLock(&actionLock);
+        switch (ret)
+        {
+        case -1:
+            goto done;
+            break;
+        case 0:
+            break;
+        default:
+            printf("Got something!\r\n");
+            int len = recv(sock, line, MAX_LINE_LENGTH, 0);
+            if (len <= 0)
+            {
+                goto done;
+            }
+            line[len - 1] = 0;
+            if (!strcmp(line, "stop"))
+            {
+                printf("Aborting lua-script!\r\n");
+                goto done;
+            }
+        }
+        mutexUnlock(&actionLock);
+    }
+    return;
+done:
+    mutexUnlock(&actionLock);
+    semaphoreSignal(&done);
 }
 
 int luaRunPath(char *path)
@@ -349,6 +415,7 @@ int luaRunPath(char *path)
 
         path = "/netcheat/dl.lua";
     }
+    runPath = path;
 
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
@@ -395,15 +462,32 @@ int luaRunPath(char *path)
     lua_pushcfunction(L, luaGetFreeze);
     lua_setglobal(L, "getFreeze");
 
-    // TODO: Run in thread and terminate it if 'STOP'
+    line = malloc(MAX_LINE_LENGTH);
+    line[0] = 0;
 
-    int res = (luaL_loadfile(L, path) || lua_pcall(L, 0, 0, 0));
-    if (res)
-    {
-        printf("%s\r\n", lua_tostring(L, -1));
-    }
+    semaphoreInit(&done, 0);
+
+    Thread luaThread;
+    Result rc = threadCreate(&luaThread, luaRunner, L, 0x4000, 49, 3);
+    if (R_FAILED(rc))
+        fatalLater(rc);
+    threadStart(&luaThread);
+
+    Thread pollThread;
+    rc = threadCreate(&pollThread, poller, NULL, 0x4000, 49, 3);
+    if (R_FAILED(rc))
+        fatalLater(rc);
+    threadStart(&pollThread);
+
+    semaphoreWait(&done);
+    svcSleepThread(5e+8);
+    threadClose(&luaThread);
     lua_close(L);
+    if(debughandle != 0)
+        detach();
+
+    free(line);
     mutexLock(&actionLock);
     attach();
-    return res;
+    return 0;
 }

@@ -82,8 +82,6 @@ void __appExit(void)
     socketExit();
 }
 
-#define MAX_LINE_LENGTH 300
-
 int sock = -1;
 
 int argmain(int argc, char **argv)
