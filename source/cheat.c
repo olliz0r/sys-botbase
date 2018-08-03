@@ -81,7 +81,6 @@ int searchSize;
 
 int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize)
 {
-    searchSize = 0;
     search = valType;
     int valSize = valSizes[valType];
     u64 off = 0;

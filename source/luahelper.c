@@ -149,6 +149,8 @@ static int luaSearchSection(lua_State *L)
     int ret = 1;
 
     mutexLock(&actionLock);
+    searchSize = 0;
+
     attach();
     const char *type = lua_tostring(L, 1);
 

@@ -12,7 +12,7 @@ enum
     VAL_END
 };
 static char *valtypes[] = {"none", "u8", "u16", "u32", "u64"};
-static int valSizes[] = {0, 1, 2, 4};
+static int valSizes[] = {0, 1, 2, 4, 8};
 
 static char *memTypeStrings[] = {"MemType_Unmapped",
                                  "MemType_Io",
