@@ -266,7 +266,7 @@ int main()
         dup2(sock, STDERR_FILENO);
 
         printf("Welcome to netcheat!\r\n"
-               "This needs fullsvcperm=1 and debugmode=1 set in your hekate-config!\r\n");
+               "This needs debugmode=1 set in your hekate-config!\r\n");
 
         while (1)
         {
