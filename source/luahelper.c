@@ -356,48 +356,13 @@ void luaRunner(void *LState)
         printf("%s\r\n", lua_tostring(L, -1));
     }
     semaphoreSignal(&done);
-    semaphoreSignal(&done);
-    // Signal for both the poller and the main-thread;
 }
 
-void poller()
+void luaHookFunc(lua_State *L, lua_Debug *ar)
 {
-    struct pollfd fd;
-    fd.fd = sock;
-    fd.events = POLLIN;
-    int ret;
-
-    while (!semaphoreTryWait(&done))
-    {
-        ret = poll(&fd, 1, 200);
-        mutexLock(&actionLock);
-        switch (ret)
-        {
-        case -1:
-            goto done;
-            break;
-        case 0:
-            break;
-        default:
-            printf("Got something!\r\n");
-            int len = recv(sock, line, MAX_LINE_LENGTH, 0);
-            if (len <= 0)
-            {
-                goto done;
-            }
-            line[len - 1] = 0;
-            if (!strcmp(line, "stop"))
-            {
-                printf("Aborting lua-script!\r\n");
-                goto done;
-            }
-        }
-        mutexUnlock(&actionLock);
-    }
-    return;
-done:
-    mutexUnlock(&actionLock);
-    semaphoreSignal(&done);
+    if (ar->event == LUA_HOOKLINE)
+        if (semaphoreTryWait(&done))
+            luaL_error(L, "Sucessfully terminated lua-script!");
 }
 
 int luaRunPath(char *path)
@@ -467,27 +432,69 @@ int luaRunPath(char *path)
 
     semaphoreInit(&done, 0);
 
+    lua_sethook(L, &luaHookFunc, LUA_MASKLINE, 0);
+
     Thread luaThread;
     Result rc = threadCreate(&luaThread, luaRunner, L, 0x4000, 49, 3);
     if (R_FAILED(rc))
         fatalLater(rc);
     threadStart(&luaThread);
 
-    Thread pollThread;
-    rc = threadCreate(&pollThread, poller, NULL, 0x4000, 49, 3);
-    if (R_FAILED(rc))
-        fatalLater(rc);
-    threadStart(&pollThread);
+    line = malloc(MAX_LINE_LENGTH);
+    line[0] = 0;
 
-    semaphoreWait(&done);
-    svcSleepThread(5e+8);
-    threadClose(&luaThread);
+    struct pollfd fd;
+    fd.fd = sock;
+    fd.events = POLLIN;
+    int ret;
+
+    while (!semaphoreTryWait(&done))
+    {
+        svcSleepThread(300000000L);
+        ret = poll(&fd, 1, 200);
+        mutexLock(&actionLock);
+        switch (ret)
+        {
+        case -1:
+            semaphoreSignal(&done);
+            mutexUnlock(&actionLock);
+            goto done;
+            break;
+        case 0:
+            break;
+        default:
+        {
+            int len = recv(sock, line, MAX_LINE_LENGTH, 0);
+            if (len <= 0)
+            {
+                printf("Receive failed!\r\n");
+                semaphoreSignal(&done);
+                mutexUnlock(&actionLock);
+                goto done;
+            }
+            line[len - 1] = 0;
+            if (!strcmp(line, "stop"))
+            {
+                printf("Aborting lua-script!\r\n");
+                line[0] = 0;
+                semaphoreSignal(&done);
+                mutexUnlock(&actionLock);
+                goto done;
+            }
+            break;
+        }
+
+        }
+        mutexUnlock(&actionLock);
+    }
+
+done:
+
+    threadWaitForExit(&luaThread);
+
     lua_close(L);
-    if(debughandle != 0)
-        detach();
 
     free(line);
-    mutexLock(&actionLock);
-    attach();
+
     return 0;
 }
