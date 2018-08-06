@@ -13,6 +13,9 @@
 #include "lua/lauxlib.h"
 #include "lua/lualib.h"
 
+Semaphore done;
+
+
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
     size_t written = fwrite(ptr, size, nmemb, stream);
@@ -55,6 +58,11 @@ static int luaRecvLine(lua_State *L)
         mutexUnlock(&actionLock);
         svcSleepThread(200000000);
         mutexLock(&actionLock);
+
+        if(semaphoreTryWait(&done)) {
+            semaphoreSignal(&done);
+            break;
+        }
     }
     lua_pushstring(L, line);
     line[0] = 0;
@@ -166,6 +174,9 @@ static int luaSearchSection(lua_State *L)
 
     int index = lua_tonumber(L, 2);
     MemoryInfo meminfo = getRegionOfType(index, regType);
+    if(meminfo.size == 0)
+        goto end;
+    
 
     const char *valTypeStr = lua_tostring(L, 3);
 
@@ -261,18 +272,15 @@ static int luaGetResultsLenght(lua_State *L)
 static int luaGetResult(lua_State *L)
 {
     mutexLock(&actionLock);
-    u64 res;
     int index = lua_tonumber(L, 1);
     if (index >= searchSize || index < 0)
     {
         luaL_error(L, "Tried to get result from invalid index\r\n");
         goto end;
     }
-    u64 tmp_res = searchArr[index];
-    memcpy(&res, &tmp_res, valSizes[search]);
 
 end:
-    lua_pushnumber(L, res);
+    lua_pushnumber(L, searchArr[index]);
     mutexUnlock(&actionLock);
     return 1;
 }
@@ -345,7 +353,6 @@ end:
     return 1;
 }
 
-Semaphore done;
 
 char *runPath;
 void luaRunner(void *LState)
