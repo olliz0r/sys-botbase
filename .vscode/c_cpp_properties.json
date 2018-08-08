@@ -4,12 +4,12 @@
             "name": "Mac",
             "includePath": [
                 "/opt/devkitpro/libnx/include/",
+                "/opt/devkitpro/devkitA64/include",
+                "/opt/devkitpro/devkitA64/aarch64-none-elf/include",
                 "${workspaceFolder}/source"
             ],
             "defines": [],
             "macFrameworkPath": [
-                "/System/Library/Frameworks",
-                "/Library/Frameworks"
             ],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c11",

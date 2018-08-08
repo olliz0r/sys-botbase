@@ -56,6 +56,7 @@ Commands:
     afreeze address u8/u16/u32/u64 value | Freezes the memory at address to value
     lfreeze                              | Lists all frozen values
     dfreeze index                        | Unfreezes the memory at index
+    luarun path/url                      | Runs lua script at path or url (http:// only)
 ```
 
 ---
@@ -111,3 +112,7 @@ If we want to unfreeze the value we just need to run
 ```
 
 And the value will be unfrozen.
+
+## Lua scripting support
+
+The documentation for the lua-scripting support can be found [here](LUADOCS.md)

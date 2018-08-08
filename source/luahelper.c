@@ -131,7 +131,7 @@ static int luaGetRegionInfo(lua_State *L)
     const char *type = lua_tostring(L, 1);
 
     u32 valType = MemType_Unmapped;
-    for (int i = 1; i < MemType_CodeWritable; i++)
+    for (int i = 1; i <= MemType_CodeWritable; i++)
         if (!strcmp(type, memTypeStrings[i]))
             valType = i;
     if (valType == MemType_Unmapped)
