@@ -92,7 +92,12 @@ static int luaPeek(lua_State *L)
         if (!strcmp(type, valtypes[i]))
             valType = i;
 
-    memcpy(&res_real, &res, valSizes[valType]);
+    if (valType == VAL_NONE)
+    {
+        luaL_error(L, "Error: Trying to peek invalid/unsupported type\r\n");
+    } else {
+        memcpy(&res_real, &res, valSizes[valType]);
+    }
 
     lua_pushnumber(L, res_real);
     detach();
@@ -116,9 +121,10 @@ static int luaPoke(lua_State *L)
     if (valType == VAL_NONE)
     {
         luaL_error(L, "Error: Trying to poke invalid/unsupported type\r\n");
+    } else {
+        poke(valSizes[valType], addr, num);
     }
 
-    poke(valSizes[valType], addr, num);
     detach();
     mutexUnlock(&actionLock);
     return 0;
@@ -261,7 +267,7 @@ static int luaContSearch(lua_State *L)
     return 0;
 }
 
-static int luaGetResultsLenght(lua_State *L)
+static int luaGetResultsLength(lua_State *L)
 {
     mutexLock(&actionLock);
     lua_pushnumber(L, searchSize);
@@ -372,6 +378,7 @@ void luaHookFunc(lua_State *L, lua_Debug *ar)
     if (ar->event == LUA_HOOKLINE)
         if (semaphoreTryWait(&done))
             luaL_error(L, "Sucessfully terminated lua-script!");
+    svcSleepThread(1);
 }
 
 int luaRunPath(char *path)
@@ -418,8 +425,8 @@ int luaRunPath(char *path)
     lua_pushcfunction(L, luaContSearch);
     lua_setglobal(L, "contSearch");
 
-    lua_pushcfunction(L, luaGetResultsLenght);
-    lua_setglobal(L, "getResultsLenght");
+    lua_pushcfunction(L, luaGetResultsLength);
+    lua_setglobal(L, "getResultsLength");
 
     lua_pushcfunction(L, luaGetResult);
     lua_setglobal(L, "getResult");
@@ -431,7 +438,7 @@ int luaRunPath(char *path)
     lua_setglobal(L, "unfreeze");
 
     lua_pushcfunction(L, luaGetFreezeLength);
-    lua_setglobal(L, "getFreezeLenght");
+    lua_setglobal(L, "getFreezeLength");
 
     lua_pushcfunction(L, luaGetFreeze);
     lua_setglobal(L, "getFreeze");
