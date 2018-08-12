@@ -16,6 +16,25 @@
 Semaphore done;
 
 
+// We're parsing the number ourself because lua apparently has no way of giving us an actuall u64 back.
+u64 bigNumberToU64(lua_State* L, int pos) {
+    const char* out = lua_tostring(L, pos);
+    if(out == NULL)
+        return 0;
+    return strtoull(out, NULL, 10);
+}
+
+int setLuaPath( lua_State* L)
+{
+    lua_getglobal( L, "package" );
+    lua_getfield( L, -1, "path" );
+    lua_pop( L, 1 );
+    lua_pushstring( L, "/netcheat/" );
+    lua_setfield( L, -2, "path" );
+    lua_pop( L, 1 );
+    return 0;
+}
+
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
     size_t written = fwrite(ptr, size, nmemb, stream);
@@ -72,7 +91,7 @@ static int luaRecvLine(lua_State *L)
 
 static int luaSleepMS(lua_State *L)
 {
-    u64 len = lua_tonumber(L, 1) * 1000000;
+    u64 len = bigNumberToU64(L, 1) * 1000000;
     svcSleepThread(len);
     return 0;
 }
@@ -82,7 +101,7 @@ static int luaPeek(lua_State *L)
     mutexLock(&actionLock);
     attach();
     const char *type = lua_tostring(L, 1);
-    u64 addr = lua_tonumber(L, 2);
+    u64 addr = bigNumberToU64(L, 2);
 
     u64 res = peek(addr);
     u64 res_real = 0;
@@ -94,10 +113,13 @@ static int luaPeek(lua_State *L)
 
     if (valType == VAL_NONE)
     {
+        detach();
+        mutexUnlock(&actionLock);
         luaL_error(L, "Error: Trying to peek invalid/unsupported type\r\n");
     } else {
         memcpy(&res_real, &res, valSizes[valType]);
     }
+
 
     lua_pushnumber(L, res_real);
     detach();
@@ -110,8 +132,8 @@ static int luaPoke(lua_State *L)
     mutexLock(&actionLock);
     attach();
     const char *type = lua_tostring(L, 1);
-    u64 addr = lua_tonumber(L, 2);
-    u64 num = lua_tonumber(L, 3);
+    u64 addr = bigNumberToU64(L, 2);
+    u64 num = bigNumberToU64(L, 3);
 
     int valType = VAL_NONE;
     for (int i = 1; i < VAL_END; i++)
@@ -120,6 +142,8 @@ static int luaPoke(lua_State *L)
 
     if (valType == VAL_NONE)
     {
+        detach();
+        mutexUnlock(&actionLock);
         luaL_error(L, "Error: Trying to poke invalid/unsupported type\r\n");
     } else {
         poke(valSizes[valType], addr, num);
@@ -142,8 +166,9 @@ static int luaGetRegionInfo(lua_State *L)
             valType = i;
     if (valType == MemType_Unmapped)
     {
+        detach();
+        mutexUnlock(&actionLock);
         luaL_error(L, "Invalid valType!");
-        goto end;
     }
 
     int num = lua_tointeger(L, 2);
@@ -152,8 +177,7 @@ static int luaGetRegionInfo(lua_State *L)
     lua_pushnumber(L, meminfo.addr);
     lua_pushnumber(L, meminfo.size);
 
-end:
-    detach();
+        detach();
     mutexUnlock(&actionLock);
     return 2;
 }
@@ -174,14 +198,18 @@ static int luaSearchSection(lua_State *L)
             regType = i;
     if (regType == MemType_Unmapped)
     {
-        luaL_error(L, "Invalid memory-type!\r\n");
-        goto end;
+        detach();
+        mutexUnlock(&actionLock);
+        luaL_error(L, "Invalid memory-type!\r\n");        
     }
 
-    int index = lua_tonumber(L, 2);
+    int index = bigNumberToU64(L, 2);
     MemoryInfo meminfo = getRegionOfType(index, regType);
-    if(meminfo.size == 0)
-        goto end;
+    if(meminfo.size == 0) {
+        detach();
+        mutexUnlock(&actionLock);
+        luaL_error(L, "Memory-section does not exist!\r\n");
+    }
     
 
     const char *valTypeStr = lua_tostring(L, 3);
@@ -195,18 +223,18 @@ static int luaSearchSection(lua_State *L)
 
     if (valType == VAL_NONE)
     {
+        detach();
+        mutexUnlock(&actionLock);
         luaL_error(L, "Invalid value-type!\r\n");
-        goto end;
     }
 
-    u64 val = lua_tonumber(L, 4);
+    u64 val = bigNumberToU64(L, 4);
 
     void *buffer = malloc(SEARCH_CHUNK_SIZE);
 
     ret = searchSection(val, valType, meminfo, buffer, SEARCH_CHUNK_SIZE);
 
     free(buffer);
-end:
     lua_pushnumber(L, ret);
     detach();
     mutexUnlock(&actionLock);
@@ -226,8 +254,9 @@ static int luaStartSearch(lua_State *L)
             regType = i;
     if (regType == MemType_Unmapped)
     {
+        detach();
+        mutexUnlock(&actionLock);
         luaL_error(L, "Invalid memory-type!\r\n");
-        goto end;
     }
 
     const char *valTypeStr = lua_tostring(L, 2);
@@ -241,15 +270,15 @@ static int luaStartSearch(lua_State *L)
 
     if (valType == VAL_NONE)
     {
+        detach();
+        mutexUnlock(&actionLock);
         luaL_error(L, "Invalid value-type!\r\n");
-        goto end;
     }
 
-    u64 val = lua_tonumber(L, 3);
+    u64 val = bigNumberToU64(L, 3);
 
     ret = startSearch(val, valType, regType);
 
-end:
     lua_pushnumber(L, ret);
     detach();
     mutexUnlock(&actionLock);
@@ -260,7 +289,7 @@ static int luaContSearch(lua_State *L)
 {
     mutexLock(&actionLock);
     attach();
-    int newVal = lua_tonumber(L, 1);
+    int newVal = bigNumberToU64(L, 1);
     contSearch(newVal);
     detach();
     mutexUnlock(&actionLock);
@@ -278,14 +307,13 @@ static int luaGetResultsLength(lua_State *L)
 static int luaGetResult(lua_State *L)
 {
     mutexLock(&actionLock);
-    int index = lua_tonumber(L, 1);
+    int index = bigNumberToU64(L, 1);
     if (index >= searchSize || index < 0)
     {
+        mutexUnlock(&actionLock);
         luaL_error(L, "Tried to get result from invalid index\r\n");
-        goto end;
     }
 
-end:
     lua_pushnumber(L, searchArr[index]);
     mutexUnlock(&actionLock);
     return 1;
@@ -296,8 +324,8 @@ static int luaFreeze(lua_State *L)
     mutexLock(&actionLock);
     attach();
     const char *type = lua_tostring(L, 1);
-    u64 addr = lua_tonumber(L, 2);
-    u64 num = lua_tonumber(L, 3);
+    u64 addr = bigNumberToU64(L, 2);
+    u64 num = bigNumberToU64(L, 3);
 
     int valType = VAL_NONE;
     for (int i = 1; i < VAL_END; i++)
@@ -306,12 +334,12 @@ static int luaFreeze(lua_State *L)
 
     if (valType == VAL_NONE)
     {
+        detach();
+        mutexUnlock(&actionLock);
         luaL_error(L, "Trying to poke invalid/unsupported type\r\n");
-        goto end;
     }
 
     freezeAdd(addr, valType, num);
-end:
     detach();
     mutexUnlock(&actionLock);
     return 0;
@@ -320,14 +348,13 @@ end:
 static int luaUnFreeze(lua_State *L)
 {
     mutexLock(&actionLock);
-    int index = lua_tonumber(L, 1);
+    int index = bigNumberToU64(L, 1);
     if (index >= numFreezes || index < 0)
     {
+        mutexUnlock(&actionLock);
         luaL_error(L, "Trying to access invalid value!\r\n");
-        goto end;
     }
     freezeDel(index);
-end:
     mutexUnlock(&actionLock);
     return 0;
 }
@@ -343,18 +370,17 @@ static int luaGetFreezeLength(lua_State *L)
 static int luaGetFreeze(lua_State *L)
 {
     mutexLock(&actionLock);
-    int index = lua_tonumber(L, 1);
+    int index = bigNumberToU64(L, 1);
     if (index >= numFreezes || index < 0)
     {
+        mutexUnlock(&actionLock);
         luaL_error(L, "Trying to access invalid value!\r\n");
-        goto end;
     }
 
     lua_pushstring(L, valtypes[freezeTypes[index]]);
     lua_pushnumber(L, freezeAddrs[index]);
     lua_pushnumber(L, freezeVals[index]);
 
-end:
     mutexUnlock(&actionLock);
     return 1;
 }
