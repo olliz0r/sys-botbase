@@ -26,7 +26,7 @@ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= -lnx -lcurl -lm -lz `freetype-config --libs`
+LIBS	:= -lnx -lcurl -lm -lz
 
 LIBDIRS	:= $(PORTLIBS) $(LIBNX)
 
