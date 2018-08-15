@@ -15,23 +15,23 @@
 
 Semaphore done;
 
-
 // We're parsing the number ourself because lua apparently has no way of giving us an actuall u64 back.
-u64 bigNumberToU64(lua_State* L, int pos) {
-    const char* out = lua_tostring(L, pos);
-    if(out == NULL)
+u64 bigNumberToU64(lua_State *L, int pos)
+{
+    const char *out = lua_tostring(L, pos);
+    if (out == NULL)
         return 0;
     return strtoull(out, NULL, 10);
 }
 
-int setLuaPath( lua_State* L)
+int setLuaPath(lua_State *L)
 {
-    lua_getglobal( L, "package" );
-    lua_getfield( L, -1, "path" );
-    lua_pop( L, 1 );
-    lua_pushstring( L, "/netcheat/" );
-    lua_setfield( L, -2, "path" );
-    lua_pop( L, 1 );
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "path");
+    lua_pop(L, 1);
+    lua_pushstring(L, "/netcheat/");
+    lua_setfield(L, -2, "path");
+    lua_pop(L, 1);
     return 0;
 }
 
@@ -78,7 +78,8 @@ static int luaRecvLine(lua_State *L)
         svcSleepThread(200000000);
         mutexLock(&actionLock);
 
-        if(semaphoreTryWait(&done)) {
+        if (semaphoreTryWait(&done))
+        {
             semaphoreSignal(&done);
             break;
         }
@@ -116,10 +117,11 @@ static int luaPeek(lua_State *L)
         detach();
         mutexUnlock(&actionLock);
         luaL_error(L, "Error: Trying to peek invalid/unsupported type\r\n");
-    } else {
+    }
+    else
+    {
         memcpy(&res_real, &res, valSizes[valType]);
     }
-
 
     lua_pushnumber(L, res_real);
     detach();
@@ -145,7 +147,9 @@ static int luaPoke(lua_State *L)
         detach();
         mutexUnlock(&actionLock);
         luaL_error(L, "Error: Trying to poke invalid/unsupported type\r\n");
-    } else {
+    }
+    else
+    {
         poke(valSizes[valType], addr, num);
     }
 
@@ -177,7 +181,7 @@ static int luaGetRegionInfo(lua_State *L)
     lua_pushnumber(L, meminfo.addr);
     lua_pushnumber(L, meminfo.size);
 
-        detach();
+    detach();
     mutexUnlock(&actionLock);
     return 2;
 }
@@ -200,17 +204,17 @@ static int luaSearchSection(lua_State *L)
     {
         detach();
         mutexUnlock(&actionLock);
-        luaL_error(L, "Invalid memory-type!\r\n");        
+        luaL_error(L, "Invalid memory-type!\r\n");
     }
 
     int index = bigNumberToU64(L, 2);
     MemoryInfo meminfo = getRegionOfType(index, regType);
-    if(meminfo.size == 0) {
+    if (meminfo.size == 0)
+    {
         detach();
         mutexUnlock(&actionLock);
         luaL_error(L, "Memory-section does not exist!\r\n");
     }
-    
 
     const char *valTypeStr = lua_tostring(L, 3);
 
@@ -232,7 +236,7 @@ static int luaSearchSection(lua_State *L)
 
     void *buffer = malloc(SEARCH_CHUNK_SIZE);
 
-    ret = searchSection(val, valType, meminfo, buffer, SEARCH_CHUNK_SIZE);
+    ret = searchSection(val, val, valType, meminfo, buffer, SEARCH_CHUNK_SIZE);
 
     free(buffer);
     lua_pushnumber(L, ret);
@@ -277,7 +281,7 @@ static int luaStartSearch(lua_State *L)
 
     u64 val = bigNumberToU64(L, 3);
 
-    ret = startSearch(val, valType, regType);
+    ret = startSearch(val, val, valType, regType);
 
     lua_pushnumber(L, ret);
     detach();
@@ -290,7 +294,7 @@ static int luaContSearch(lua_State *L)
     mutexLock(&actionLock);
     attach();
     int newVal = bigNumberToU64(L, 1);
-    contSearch(newVal);
+    contSearch(newVal, newVal);
     detach();
     mutexUnlock(&actionLock);
     return 0;
@@ -384,7 +388,6 @@ static int luaGetFreeze(lua_State *L)
     mutexUnlock(&actionLock);
     return 1;
 }
-
 
 char *runPath;
 void luaRunner(void *LState)
@@ -525,7 +528,6 @@ int luaRunPath(char *path)
             }
             break;
         }
-
         }
         mutexUnlock(&actionLock);
     }

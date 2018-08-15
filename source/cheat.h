@@ -48,8 +48,8 @@ void detach();
 void poke(int valSize, u64 addr, u64 val);
 u64 peek(u64 addr);
 
-int startSearch(u64 val, u32 valType, u32 memtype);
-int contSearch(u64 val);
+int startSearch(u64 valMin, u64 valMax, u32 valType, u32 memtype);
+int contSearch(u64 valMin, u64 valMax);
 
 
 #define FREEZE_LIST_LEN 100
@@ -66,4 +66,4 @@ extern u64 freezeVals[FREEZE_LIST_LEN];
 
 
 MemoryInfo getRegionOfType(int index, u32 type);
-int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize);
+int searchSection(u64 valMin, u64 valMax, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize);

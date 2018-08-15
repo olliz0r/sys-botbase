@@ -79,23 +79,30 @@ int search = VAL_NONE;
 u64 searchArr[SEARCH_ARR_SIZE];
 int searchSize;
 
-int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize)
+int searchSection(u64 valMin, u64 valMax, u32 valType, MemoryInfo meminfo, void *buffer, u64 bufSize)
 {
     search = valType;
     int valSize = valSizes[valType];
     u64 off = 0;
 
+    u64 valMinReal = 0;
+    memcpy(&valMinReal, &valMin, valSize);
+    u64 valMaxReal = 0;
+    memcpy(&valMaxReal, &valMax, valSize);
+
+
+    u64 searchVal = 0;
     while (off < meminfo.size)
     {
         if (meminfo.size - off < bufSize)
             bufSize = meminfo.size - off;
         if(R_FAILED(svcReadDebugProcessMemory(buffer, debughandle, meminfo.addr + off, bufSize)))
             return 0;
-        
-        
+
         for (u64 i = 0; i < bufSize; i += valSize)
         {
-            if (!memcmp(buffer + i, &val, valSize))
+            memcpy(&searchVal, buffer + i, valSize);
+            if(valMinReal <= searchVal && valMaxReal >= searchVal)
             {
                 if (searchSize < SEARCH_ARR_SIZE)
                     searchArr[searchSize++] = meminfo.addr + off + i;
@@ -108,7 +115,7 @@ int searchSection(u64 val, u32 valType, MemoryInfo meminfo, void *buffer, u64 bu
     return 0;
 }
 
-int startSearch(u64 val, u32 valType, u32 memtype)
+int startSearch(u64 valMin, u64 valMax, u32 valType, u32 memtype)
 {
     search = valType;
 
@@ -125,7 +132,7 @@ int startSearch(u64 val, u32 valType, u32 memtype)
         lastaddr = meminfo.addr;
         u32 pageinfo;
         svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, meminfo.addr + meminfo.size);
-        if (meminfo.type == memtype && searchSection(val, valType, meminfo, outbuf, SEARCH_CHUNK_SIZE))
+        if (meminfo.type == memtype && searchSection(valMin, valMax, valType, meminfo, outbuf, SEARCH_CHUNK_SIZE))
         {
             free(outbuf);
             return 1;
@@ -136,7 +143,7 @@ int startSearch(u64 val, u32 valType, u32 memtype)
     return 0;
 }
 
-int contSearch(u64 val)
+int contSearch(u64 valMin, u64 valMax)
 {
     int valSize = valSizes[search];
     int newSearchSize = 0;
@@ -146,10 +153,13 @@ int contSearch(u64 val)
         return 1;
     }
 
+    u64 newValReal = 0;
+
     for (int i = 0; i < searchSize; i++)
     {
         u64 newVal = peek(searchArr[i]);
-        if (!memcmp(&val, &newVal, valSize))
+        memcpy(&newValReal, &newVal, valSize);
+        if(valMin <= newValReal && valMax >= newValReal)
         {
             searchArr[newSearchSize++] = searchArr[i];
         }

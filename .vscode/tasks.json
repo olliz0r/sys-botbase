@@ -6,7 +6,7 @@
         {
             "label": "Run",
             "type": "shell",
-            "command": "diskutil mount /dev/disk2; make;and cp sys-netcheat.kip /Volumes/Untitled/RajNX; sudo chflags -R arch /Volumes/Untitled; sudo chflags -R noarch /Volumes/Untitled/Nintendo/;and diskutil unmount /Volumes/Untitled"
+            "command": "diskutil mountDisk /dev/disk2; make;and cp sys-netcheat.kip /Volumes/Untitled/RajNX; sudo chflags -R arch /Volumes/Untitled; sudo chflags -R noarch /Volumes/Untitled/Nintendo/;and diskutil unmountDisk /Volumes/Untitled"
         }
     ]
 }

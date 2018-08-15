@@ -94,6 +94,58 @@ int argmain(int argc, char **argv)
         goto help;
     }
 
+    if (!strcmp(argv[0], "psearch"))
+    {
+        if (argc != 3)
+            goto help;
+
+        int searchType = VAL_NONE;
+        for (int i = VAL_U32; i < VAL_END; i++)
+        {
+            if (!strcmp(argv[1], valtypes[i]))
+                searchType = i;
+        }
+
+        u64 val = strtoull(argv[2], NULL, 16);
+
+        MemoryInfo meminfo;
+        u32 pageinfo;
+        svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, val);
+
+        for (u32 memT = 1; memT <= MemType_CodeWritable; memT++)
+        {
+
+            startSearch(meminfo.addr, val, searchType, memT);
+
+            for (int i = 0; i < searchSize; i++)
+            {
+                u64 ptrRaw = peek(searchArr[i]);
+                u64 ptrReal;
+                memcpy(&ptrReal, &ptrRaw, valSizes[searchType]);
+
+                MemoryInfo regInfo;
+                int regInd = 0;
+                while (1)
+                {
+                    regInfo = getRegionOfType(regInd, memT);
+
+                    if (regInfo.addr <= searchArr[i] && regInfo.addr + regInfo.size >= searchArr[i])
+                        break;
+                    regInd++;
+                }
+                MemoryInfo meminfo;
+                u32 pageinfo;
+                svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, searchArr[i]);
+                
+                printf("Pointer: %s#%d + %lu\r\n", memTypeStrings[memT], regInd, searchArr[i] - meminfo.addr);
+                printf("Offset: %lu\r\n", val - ptrReal);
+                
+                printf("\r\n");
+            }
+        }
+        return 0;
+    }
+
     if (!strcmp(argv[0], "ssearch"))
     {
         if (argc != 3)
@@ -112,7 +164,7 @@ int argmain(int argc, char **argv)
         u64 val = strtoull(argv[2], NULL, 10);
 
         printf("Starting search, this might take a while...\r\n");
-        int res = startSearch(val, searchType, MemType_Heap);
+        int res = startSearch(val, val, searchType, MemType_Heap);
 
         for (int i = 0; i < 100 && i < searchSize; i++)
             printf("Hit at %lx!\r\n", searchArr[i]);
@@ -139,7 +191,7 @@ int argmain(int argc, char **argv)
         u64 newVal = 0;
 
         newVal = strtoull(argv[1], NULL, 10);
-        contSearch(newVal);
+        contSearch(newVal, newVal);
 
         for (int i = 0; i < 100 && i < searchSize; i++)
             printf("Hit at %lx!\r\n", searchArr[i]);
@@ -223,7 +275,8 @@ help:
            "    afreeze address u8/u16/u32/u64 value | Freezes the memory at address to value\r\n"
            "    lfreeze                              | Lists all frozen values\r\n"
            "    dfreeze index                        | Unfreezes the memory at index\r\n"
-           "    luarun path/url                      | Runs lua script at path or url (http:// only)\r\n");
+           "    luarun path/url                      | Runs lua script at path or url (http:// only)\r\n"
+           "    psearch u32/u64 address              | Searches for pointers to address (most useful pointers are in MemType_CodeMutable)");
     return 0;
 }
 
