@@ -114,8 +114,11 @@ int argmain(int argc, char **argv)
 
         for (u32 memT = 1; memT <= MemType_CodeWritable; memT++)
         {
+            if(memT == MemType_Heap)
+                continue;
+                // A **lot** of useless results are in the heap
 
-            startSearch(meminfo.addr, val, searchType, memT);
+            startSearch(meminfo.addr, meminfo.addr + meminfo.size, searchType, memT);
 
             for (int i = 0; i < searchSize; i++)
             {
