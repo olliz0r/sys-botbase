@@ -118,7 +118,7 @@ int argmain(int argc, char **argv)
                 continue;
                 // A **lot** of useless results are in the heap
 
-            startSearch(meminfo.addr, meminfo.addr + meminfo.size, searchType, memT);
+            startSearch(meminfo.addr, val, searchType, memT);
 
             for (int i = 0; i < searchSize; i++)
             {
