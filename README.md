@@ -20,7 +20,7 @@ It requires a hacked switch (with hekate as the bootloader).
 
 Please keep in mind that at this point this will only work in combination with layeredfs if the atmosphere `pm.kip` is loaded as well. (by default now in the [SDFiles](https://github.com/tumGER/SDFilesSwitch))
 
-To use this first add `debugmode=1` to your `hekate_ipl.ini`.  
+To use this first add `debugmode=1` (and `fullsvcperm=1` if you're on the latest stable version) to your `hekate_ipl.ini`.  
 After that move the `sys-netcheat.kip` from the [release](https://github.com/jakibaki/sys-netcheat/releases/) to the `modules`-folder of your sdcard and add the line `kip1=modules/sys-netcheat.kip` to the `hekate_ipl.ini` as well.
 
 It will look somewhat like this:
@@ -31,6 +31,7 @@ It will look somewhat like this:
 kip1=...
 kip1=modules/sys-netcheat.kip
 debugmode=1
+fullsvcperm=1
 ...
 ```
 
@@ -115,4 +116,4 @@ And the value will be unfrozen.
 
 ## Lua scripting support
 
-The documentation for the lua-scripting support can be found [here](LUADOCS.md)
+The documentation for the lua-scripting support can be found [here](LUADOCS.md) (not in stable and will be changed very much)
