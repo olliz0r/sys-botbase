@@ -30,10 +30,14 @@ It will look somewhat like this:
 [CFW]
 kip1=...
 kip1=modules/sys-netcheat.kip
+secmon=.../exosphere.bin
 debugmode=1
 fullsvcperm=1
+atmosphere=1
 ...
 ```
+
+Exosphere is needed on 6.0 in order for sleep-mode to work!
 
 After installing simply boot your switch, start a game/homebrew and run
 
