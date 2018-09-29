@@ -4,9 +4,6 @@
 
 ## Warning:
 
-For some reason this may result in installed games no longer launching if this is used in combination with sigpatches.  
-If that happens running the 'Delete Common Ticket' option from Tinfoil and then (force) rebooting fixes it **sometimes**.
-
 In at least one case running this with ReiNX (with sigpatches) resulted in all games on the storage being permanently corrupted!  
 Be **very** careful when trying out weird configurations. In any case you should (not just for this) make a nand-backup so you can restore from somewhere if things go south.
 
