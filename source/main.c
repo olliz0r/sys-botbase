@@ -93,7 +93,7 @@ enum
 char *valtypes[] = {"none", "u8", "u16", "u32", "u64"};
 
 int search = VAL_NONE;
-#define SEARCH_ARR_SIZE 1000000
+#define SEARCH_ARR_SIZE 500000
 u64 searchArr[SEARCH_ARR_SIZE];
 int searchSize;
 
@@ -556,7 +556,7 @@ int main()
         dup2(sock, STDERR_FILENO);
 
         printf("Welcome to netcheat!\r\n"
-               "This needs fullsvcperm=1 and debugmode=1 set in your hekate-config!\r\n");
+               "This needs an atmos-base >= 0.8.2\r\n");
 
         while (1)
         {

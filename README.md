@@ -16,12 +16,9 @@ I am in no way responsible for any damage that may or may not happen to your swi
 
 This is an open-source cheat-engine for the nintendo switch.
 
-It requires a hacked switch (with hekate as the bootloader).
+It requires a hacked switch (recommended configuration is current kosmos).
 
-Please keep in mind that at this point this will **not** work if layeredfs is enabled!
-
-To use this first add `fullsvcperm=1` and `debugmode=1` to your `hekate_ipl.ini`.  
-After that move the `sys-netcheat.kip` from the [release](https://github.com/jakibaki/sys-netcheat/releases/) to the `modules`-folder of your sdcard and add the line `kip1=modules/sys-netcheat.kip` to the `hekate_ipl.ini` as well.
+To use this first the `sys-netcheat.kip` from the [release](https://github.com/jakibaki/sys-netcheat/releases/) to the `modules`-folder of your sdcard and add the line `kip1=modules/sys-netcheat.kip` to the `hekate_ipl.ini` as well.
 
 It will look somewhat like this:
 
@@ -30,8 +27,6 @@ It will look somewhat like this:
 [CFW]
 kip1=...
 kip1=modules/sys-netcheat.kip
-fullsvcperm=1
-debugmode=1
 ...
 ```
 
@@ -47,7 +42,7 @@ You'll be greeted by this:
 
 ```
 Welcome to netcheat!
-This needs fullsvcperm=1 and debugmode=1 set in your hekate-config!
+This needs an atmos-base >= 0.8.2
 > help
 Commands:
     help                                 | Shows this text
