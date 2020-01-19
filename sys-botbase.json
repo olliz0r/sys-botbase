@@ -1,6 +1,6 @@
 {
-	"name": "sys-netcheat",
-	"title_id": "0x430000000000000A",
+	"name": "sys-botbase",
+	"title_id": "0x430000000000000B",
 	"main_thread_stack_size": "0x00054000",
 	"main_thread_priority": 49,
 	"default_cpu_id": 3,

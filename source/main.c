@@ -7,10 +7,9 @@
 #include <unistd.h>
 #include <math.h>
 #include <switch.h>
-#include "cheat.h"
+#include "commands.h"
 #include "args.h"
 #include "util.h"
-#include "luahelper.h"
 
 #define TITLE_ID 0x420000000000000F
 #define HEAP_SIZE 0x000540000
@@ -32,24 +31,6 @@ void __libnx_initheap(void)
     fake_heap_end = fake_heap + HEAP_SIZE;
 }
 
-void registerFspLr()
-{
-    if (kernelAbove400())
-        return;
-
-    Result rc = fsprInitialize();
-    if (R_FAILED(rc))
-        fatalLater(rc);
-
-    u64 pid;
-    svcGetProcessId(&pid, CUR_PROCESS_HANDLE);
-
-    rc = fsprRegisterProgram(pid, TITLE_ID, FsStorageId_NandSystem, NULL, 0, NULL, 0);
-    if (R_FAILED(rc))
-        fatalLater(rc);
-    fsprExit();
-}
-
 void __appInit(void)
 {
     Result rc;
@@ -57,10 +38,19 @@ void __appInit(void)
     rc = smInitialize();
     if (R_FAILED(rc))
         fatalLater(rc);
+    if (hosversionGet() == 0) {
+        rc = setsysInitialize();
+        if (R_SUCCEEDED(rc)) {
+            SetSysFirmwareVersion fw;
+            rc = setsysGetFirmwareVersion(&fw);
+            if (R_SUCCEEDED(rc))
+                hosversionSet(MAKEHOSVERSION(fw.major, fw.minor, fw.micro));
+            setsysExit();
+        }
+    }
     rc = fsInitialize();
     if (R_FAILED(rc))
         fatalLater(rc);
-    registerFspLr();
     rc = fsdevMountSdmc();
     if (R_FAILED(rc))
         fatalLater(rc);
@@ -89,197 +79,15 @@ int argmain(int argc, char **argv)
     if (argc == 0)
         return 0;
 
-    if (!strcmp(argv[0], "help"))
+
+    if (!strcmp(argv[0], "examplecommand"))
     {
-        goto help;
-    }
-
-    if (!strcmp(argv[0], "psearch"))
-    {
-        if (argc != 3)
-            goto help;
-
-        int searchType = VAL_NONE;
-        for (int i = VAL_U32; i < VAL_END; i++)
-        {
-            if (!strcmp(argv[1], valtypes[i]))
-                searchType = i;
-        }
-
-        u64 val = strtoull(argv[2], NULL, 16);
-
-        MemoryInfo meminfo;
-        u32 pageinfo;
-        svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, val);
-
-        for (u32 memT = 1; memT <= MemType_CodeWritable; memT++)
-        {
-            if(memT == MemType_Heap)
-                continue;
-                // A **lot** of useless results are in the heap
-
-            startSearch(meminfo.addr, val, searchType, memT);
-
-            for (int i = 0; i < searchSize; i++)
-            {
-                u64 ptrRaw = peek(searchArr[i]);
-                u64 ptrReal;
-                memcpy(&ptrReal, &ptrRaw, valSizes[searchType]);
-
-                MemoryInfo regInfo;
-                int regInd = 0;
-                while (1)
-                {
-                    regInfo = getRegionOfType(regInd, memT);
-
-                    if (regInfo.addr <= searchArr[i] && regInfo.addr + regInfo.size >= searchArr[i])
-                        break;
-                    regInd++;
-                }
-                MemoryInfo meminfo;
-                u32 pageinfo;
-                svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, searchArr[i]);
-                
-                printf("Pointer: %s#%d + %lu\r\n", memTypeStrings[memT], regInd, searchArr[i] - meminfo.addr);
-                printf("Offset: %lu\r\n", val - ptrReal);
-                
-                printf("\r\n");
-            }
-        }
-        return 0;
-    }
-
-    if (!strcmp(argv[0], "ssearch"))
-    {
-        if (argc != 3)
-            goto help;
-
-        int searchType = VAL_NONE;
-        for (int i = 1; i < VAL_END; i++)
-        {
-            if (!strcmp(argv[1], valtypes[i]))
-                searchType = i;
-        }
-
-        if (searchType == VAL_NONE)
-            goto help;
-
-        u64 val = strtoull(argv[2], NULL, 10);
-
-        printf("Starting search, this might take a while...\r\n");
-        int res = startSearch(val, val, searchType, MemType_Heap);
-
-        for (int i = 0; i < 100 && i < searchSize; i++)
-            printf("Hit at %lx!\r\n", searchArr[i]);
-
-        if (searchSize > 100)
-            printf("...\r\n");
-
-        if (res)
-            printf("There are too many hits to process, try getting the variable to a number that's less 'common'\r\n");
-
-        return 0;
-    }
-
-    if (!strcmp(argv[0], "csearch"))
-    {
-        if (argc != 2)
-            goto help;
-        if (search == VAL_NONE)
-        {
-            printf("You need to start a search first!");
+        if(argc != 3)
             return 0;
-        }
-
-        u64 newVal = 0;
-
-        newVal = strtoull(argv[1], NULL, 10);
-        contSearch(newVal, newVal);
-
-        for (int i = 0; i < 100 && i < searchSize; i++)
-            printf("Hit at %lx!\r\n", searchArr[i]);
-
-        if (searchSize > 100)
-            printf("...\r\n");
 
         return 0;
     }
 
-    if (!strcmp(argv[0], "poke"))
-    {
-        if (argc != 4)
-            goto help;
-        u64 addr = strtoull(argv[1], NULL, 16);
-        u64 val = strtoull(argv[3], NULL, 10);
-
-        int valType = VAL_NONE;
-        for (int i = 1; i < VAL_END; i++)
-            if (!strcmp(argv[2], valtypes[i]))
-                valType = i;
-        if (valType == VAL_NONE)
-            goto help;
-
-        poke(valSizes[valType], addr, val);
-
-        return 0;
-    }
-
-    if (!strcmp(argv[0], "lfreeze"))
-    {
-        freezeList();
-        return 0;
-    }
-
-    if (!strcmp(argv[0], "dfreeze"))
-    {
-        if (argc != 2)
-            goto help;
-        u32 index = strtoul(argv[1], NULL, 10);
-        freezeDel(index);
-        return 0;
-    }
-
-    if (!strcmp(argv[0], "afreeze"))
-    {
-        if (argc != 4)
-            goto help;
-        u64 addr = strtoull(argv[1], NULL, 16);
-        u64 val = strtoull(argv[3], NULL, 10);
-
-        int valType = VAL_NONE;
-        for (int i = 1; i < VAL_END; i++)
-            if (!strcmp(argv[2], valtypes[i]))
-                valType = i;
-        if (valType == VAL_NONE)
-            goto help;
-
-        freezeAdd(addr, valType, val);
-
-        return 0;
-    }
-
-    if (!strcmp(argv[0], "luarun"))
-    {
-        if (argc != 2)
-            goto help;
-        if (luaRunPath(argv[1]))
-        {
-            printf("Something went wrong while trying to run the lua-script :/\r\n");
-        }
-        return 0;
-    }
-
-help:
-    printf("Commands:\r\n"
-           "    help                                 | Shows this text\r\n"
-           "    ssearch u8/u16/u32/u64 value         | Starts a search with 'value' as the starting-value\r\n"
-           "    csearch value                        | Searches the hits of the last search for the new value\r\n"
-           "    poke address u8/u16/u32/u64 value    | Sets the memory at address to value\r\n"
-           "    afreeze address u8/u16/u32/u64 value | Freezes the memory at address to value\r\n"
-           "    lfreeze                              | Lists all frozen values\r\n"
-           "    dfreeze index                        | Unfreezes the memory at index\r\n"
-           "    luarun path/url                      | Runs lua script at path or url (http:// only)\r\n"
-           "    psearch u32/u64 address              | Searches for pointers to address (most useful pointers are in MemType_CodeMutable)");
     return 0;
 }
 
@@ -293,16 +101,6 @@ int main()
     struct sockaddr_in client;
 
     mutexInit(&actionLock);
-
-    luaInit();
-
-    Thread freezeThread;
-    Result rc = threadCreate(&freezeThread, freezeLoop, NULL, 0x4000, 49, 3);
-    if (R_FAILED(rc))
-        fatalLater(rc);
-    rc = threadStart(&freezeThread);
-    if (R_FAILED(rc))
-        fatalLater(rc);
 
     while (appletMainLoop())
     {
@@ -321,13 +119,8 @@ int main()
         fflush(stderr);
         dup2(sock, STDERR_FILENO);
 
-        printf("Welcome to netcheat!\r\n"
-               "This needs debugmode=1 set in your hekate-config!\r\n");
-
         while (1)
         {
-            write(sock, "> ", 2);
-
             int len = recv(sock, linebuf, MAX_LINE_LENGTH, 0);
             if (len < 1)
             {
