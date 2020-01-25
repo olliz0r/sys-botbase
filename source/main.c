@@ -133,6 +133,31 @@ int argmain(int argc, char **argv)
         release(key);
     }
 
+    //setStick <left or right stick> <x value> <y value>
+    if (!strcmp(argv[0], "setStick"))
+    {
+        if(argc != 4)
+            return 0;
+        
+        int side = 0;
+        if(!strcmp(argv[1], "LEFT")){
+            side = JOYSTICK_LEFT;
+        }else if(!strcmp(argv[1], "RIGHT")){
+            side = JOYSTICK_RIGHT;
+        }else{
+            return 0;
+        }
+
+        int dxVal = strtol(argv[2], NULL, 0);
+        if(dxVal > JOYSTICK_MAX) dxVal = JOYSTICK_MAX; //0x7FFF
+        if(dxVal < JOYSTICK_MIN) dxVal = JOYSTICK_MIN; //-0x8000
+        int dyVal = strtol(argv[3], NULL, 0);
+        if(dxVal > JOYSTICK_MAX) dxVal = JOYSTICK_MAX;
+        if(dxVal < JOYSTICK_MIN) dxVal = JOYSTICK_MIN;
+
+        setStickState(side, dxVal, dyVal);
+    }
+
     return 0;
 }
 

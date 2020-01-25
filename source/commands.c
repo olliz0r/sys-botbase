@@ -108,7 +108,10 @@ void release(HidControllerKeys btn)
     hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
-void joystickstate(char* side, char* dx, char* dy)
+void setStickState(int side, int dxVal, int dyVal)
 {
-
+    initController();
+    controllerState.joysticks[side].dx = dxVal;
+    controllerState.joysticks[side].dy = dyVal;
+    hiddbgSetHdlsState(controllerHandle, &controllerState);
 }

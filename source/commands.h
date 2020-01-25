@@ -14,4 +14,4 @@ void peek(u64 addr, u64 size);
 void click(HidControllerKeys btn);
 void press(HidControllerKeys btn);
 void release(HidControllerKeys btn);
-void joystickstate(char* side, char* dx, char* dy);
+void setStickState(int side, int dxVal, int dyVal);
