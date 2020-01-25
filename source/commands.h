@@ -1,10 +1,17 @@
 #include <switch.h>
-#define SEARCH_CHUNK_SIZE 0x40000
 
 extern Handle debughandle;
+bool bControllerIsInitialised;
+u64 controllerHandle;
+HiddbgHdlsDeviceInfo controllerDevice;
+HiddbgHdlsState controllerState;
 
 int attach();
 void detach();
 
-void poke(int valSize, u64 addr, u64 val);
-u64 peek(u64 addr);
+void poke(u64 addr, u64 size, u8* val);
+void peek(u64 addr, u64 size);
+void click(HidControllerKeys btn);
+void press(HidControllerKeys btn);
+void release(HidControllerKeys btn);
+void joystickstate(char* side, char* dx, char* dy);

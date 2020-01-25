@@ -80,12 +80,57 @@ int argmain(int argc, char **argv)
         return 0;
 
 
-    if (!strcmp(argv[0], "examplecommand"))
+    //peek <address in hex or dec> <amount of bytes in hex or dec>
+    if (!strcmp(argv[0], "peek"))
     {
         if(argc != 3)
             return 0;
 
-        return 0;
+        attach();
+        u64 addr = getHeap() + parseStringToInt(argv[1]);
+        u64 size = parseStringToInt(argv[2]);
+        peek(addr, size);
+        detach();
+    }
+
+    //poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex or dec>
+    if (!strcmp(argv[0], "poke"))
+    {
+        if(argc != 4)
+            return 0;
+        attach();
+        u64 addr = getHeap() + parseStringToInt(argv[1]);
+        u64 size = parseStringToInt(argv[2]);
+        u8* data = parseStringToByteBuffer(argv[3]);
+        poke(addr, size, data);
+        detach();
+    }
+
+    //click <buttontype>
+    if (!strcmp(argv[0], "click"))
+    {
+        if(argc != 2)
+            return 0;
+        HidControllerKeys key = parseStringToButton(argv[1]);
+        click(key);
+    }
+
+    //hold <buttontype>
+    if (!strcmp(argv[0], "press"))
+    {
+        if(argc != 2)
+            return 0;
+        HidControllerKeys key = parseStringToButton(argv[1]);
+        press(key);
+    }
+
+    //release <buttontype>
+    if (!strcmp(argv[0], "release"))
+    {
+        if(argc != 2)
+            return 0;
+        HidControllerKeys key = parseStringToButton(argv[1]);
+        release(key);
     }
 
     return 0;
@@ -99,8 +144,6 @@ int main()
 
     int c = sizeof(struct sockaddr_in);
     struct sockaddr_in client;
-
-    mutexInit(&actionLock);
 
     while (appletMainLoop())
     {
@@ -128,18 +171,7 @@ int main()
             }
 
             linebuf[len - 1] = 0;
-
-            mutexLock(&actionLock);
-            if (attach())
-            {
-                mutexUnlock(&actionLock);
-                continue;
-            }
-
             parseArgs(linebuf, &argmain);
-
-            detach();
-            mutexUnlock(&actionLock);
 
             svcSleepThread(1e+8L);
         }
