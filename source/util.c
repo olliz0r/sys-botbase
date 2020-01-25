@@ -91,7 +91,7 @@ u64 parseStringToInt(char* arg){
     return ret;
 }
 
-u8* parseStringToByteBuffer(char* arg)
+u8* parseStringToByteBuffer(char* arg, u64* size)
 {
     char toTranslate[2];
     int length = strlen(arg);
@@ -134,6 +134,7 @@ u8* parseStringToByteBuffer(char* arg)
             buffer[i] = strtoul(toTranslate, NULL, 10);
         }
     }
+    *size = bufferSize;
     return buffer;
 }
 

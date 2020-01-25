@@ -96,12 +96,12 @@ int argmain(int argc, char **argv)
     //poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex or dec>
     if (!strcmp(argv[0], "poke"))
     {
-        if(argc != 4)
+        if(argc != 3)
             return 0;
         attach();
         u64 addr = getHeap() + parseStringToInt(argv[1]);
-        u64 size = parseStringToInt(argv[2]);
-        u8* data = parseStringToByteBuffer(argv[3]);
+        u64 size = 0;
+        u8* data = parseStringToByteBuffer(argv[2], &size);
         poke(addr, size, data);
         detach();
     }
