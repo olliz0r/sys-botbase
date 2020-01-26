@@ -26,5 +26,15 @@ Don't even think of blaming me if anything goes wrong with you using this. It's 
 ### screen capture:
 - [ ] capture current screen and send it 
 
+# Installation
+I've only tried this on Atmosphere (0.10.2), so if you are using a different cfw your experience might vary.
+
+Copy the sys-botbase.nsp file to sdmc://atmosphere/contents/430000000000000B and rename it to exefs.nsp.
+Create a new folder in sdmc://atmosphere/contents/430000000000000B names "flags".
+Create a empty file called boot2.flag inside this folder.
+Restart your switch.
+
+The sysmodule opens a socket connection on port 6000. See the python example on how to talk to the sysmodule and what commands are available.
+
 
 # big thank you to jakibaki for a great sysmodule base to learn and work with, as well as being helpful on the Reswitched discord!

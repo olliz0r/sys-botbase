@@ -16,7 +16,7 @@ int setupServerSocket()
     lissock = socket(AF_INET, SOCK_STREAM, 0);
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(5555);
+    server.sin_port = htons(6000);
 
     while (bind(lissock, (struct sockaddr *)&server, sizeof(server)) < 0)
     {

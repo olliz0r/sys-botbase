@@ -11,7 +11,7 @@
 #include "args.h"
 #include "util.h"
 
-#define TITLE_ID 0x420000000000000F
+#define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
 
 // we aren't an applet

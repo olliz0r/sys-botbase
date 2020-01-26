@@ -1,8 +1,8 @@
 {
 	"name": "sys-botbase",
-	"title_id": "0x430000000000000A",
-      "title_id_range_min": "0x430000000000000A",
-      "title_id_range_max": "0x430000000000000A",
+	"title_id": "0x430000000000000B",
+      "title_id_range_min": "0x430000000000000B",
+      "title_id_range_max": "0x430000000000000B",
       "main_thread_stack_size": "0x00024000",
       "main_thread_priority": 49,
       "default_cpu_id": 3,
