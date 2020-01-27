@@ -158,7 +158,7 @@ int argmain(int argc, char **argv)
         setStickState(side, dxVal, dyVal);
     }
 
-    if(strcmp(argv[0], "detachController"))
+    if(!strcmp(argv[0], "detachController"))
     {
         hiddbgDetachHdlsVirtualDevice(controllerHandle);
         hiddbgReleaseHdlsWorkBuffer();
