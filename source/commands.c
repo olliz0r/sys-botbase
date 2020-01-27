@@ -43,7 +43,7 @@ void detach()
 
 void initController()
 {
-    if(bControllerIsInitialised == 1) return;
+    if(bControllerIsInitialised) return;
     //taken from switchexamples github
     hiddbgInitialize();
     // Set the controller type to Pro-Controller, and set the npadInterfaceType.
