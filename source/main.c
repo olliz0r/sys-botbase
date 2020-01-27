@@ -158,12 +158,19 @@ int argmain(int argc, char **argv)
         setStickState(side, dxVal, dyVal);
     }
 
+    if(strcmp(argv[0], "detachController"))
+    {
+        hiddbgDetachHdlsVirtualDevice(controllerHandle);
+        hiddbgReleaseHdlsWorkBuffer();
+        hiddbgExit();
+        bControllerIsInitialised = false;
+    }
+
     return 0;
 }
 
 int main()
 {
-    int listenfd = setupServerSocket();
 
     char *linebuf = malloc(sizeof(char) * MAX_LINE_LENGTH);
 
@@ -172,13 +179,13 @@ int main()
 
     while (appletMainLoop())
     {
+        int listenfd = setupServerSocket();
         sock = accept(listenfd, (struct sockaddr *)&client, (socklen_t *)&c);
         if (sock <= 0)
         {
             // Accepting fails after sleep for some reason.
             svcSleepThread(1e+9L);
             close(listenfd);
-            listenfd = setupServerSocket();
             continue;
         }
 
@@ -200,6 +207,7 @@ int main()
 
             svcSleepThread(1e+8L);
         }
+        close(listenfd);
         detach();
     }
 
