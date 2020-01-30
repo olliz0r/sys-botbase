@@ -91,7 +91,7 @@ void click(HidControllerKeys btn)
 {
     initController();
     press(btn);
-    svcSleepThread(50 * 1e+6L); //50ms
+    svcSleepThread(50 * 1e+6L); //50ms = 50 000 000
     release(btn);
 }
 void press(HidControllerKeys btn)

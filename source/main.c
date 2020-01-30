@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/errno.h>
 #include <arpa/inet.h>
@@ -10,6 +11,7 @@
 #include "commands.h"
 #include "args.h"
 #include "util.h"
+#include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
@@ -166,7 +168,32 @@ int argmain(int argc, char **argv)
         bControllerIsInitialised = false;
     }
 
+    if(!strcmp(argv[0], "pixelPeek")){
+        
+    }
+
     return 0;
+}
+
+void add_to_pfds(struct pollfd *pfds[], int newfd, int *fd_count, int *fd_size)
+{
+    if (*fd_count == *fd_size) {
+        *fd_size *= 2;
+
+        *pfds = realloc(*pfds, sizeof(**pfds) * (*fd_size));
+    }
+
+    (*pfds)[*fd_count].fd = newfd;
+    (*pfds)[*fd_count].events = POLLIN;
+
+    (*fd_count)++;
+}
+
+void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
+{
+    pfds[i] = pfds[*fd_count-1];
+
+    (*fd_count)--;
 }
 
 int main()
@@ -177,38 +204,61 @@ int main()
     int c = sizeof(struct sockaddr_in);
     struct sockaddr_in client;
 
+    int fd_count = 0;
+    int fd_size = 5;
+    struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
+
+    int listenfd = setupServerSocket();
+    pfds[0].fd = listenfd;
+    pfds[0].events = POLLIN;
+    fd_count = 1;
+
+    int newfd;
     while (appletMainLoop())
     {
-        int listenfd = setupServerSocket();
-        sock = accept(listenfd, (struct sockaddr *)&client, (socklen_t *)&c);
-        if (sock <= 0)
+        int poll_count = poll(pfds, fd_count, -1);
+        for(int i = 0; i < fd_count; i++) 
         {
-            // Accepting fails after sleep for some reason.
-            svcSleepThread(1e+9L);
-            close(listenfd);
-            continue;
-        }
-
-        fflush(stdout);
-        dup2(sock, STDOUT_FILENO);
-        fflush(stderr);
-        dup2(sock, STDERR_FILENO);
-
-        while (1)
-        {
-            int len = recv(sock, linebuf, MAX_LINE_LENGTH, 0);
-            if (len < 1)
+            if (pfds[i].revents & POLLIN) 
             {
-                break;
+                if (pfds[i].fd == listenfd) 
+                {
+                    newfd = accept(listenfd, (struct sockaddr *)&client, (socklen_t *)&c);
+                    if(newfd != -1)
+                    {
+                        add_to_pfds(&pfds, newfd, &fd_count, &fd_size);
+                    }else{
+                        svcSleepThread(1e+9L);
+                        close(listenfd);
+                        listenfd = setupServerSocket();
+                        pfds[0].fd = listenfd;
+                        pfds[0].events = POLLIN;
+                        break;
+                    }
+                }
+                else
+                {
+                    int len = recv(pfds[i].fd, linebuf, MAX_LINE_LENGTH, 0);
+                    if(len <= 0)
+                    {
+                        close(pfds[i].fd);
+                        del_from_pfds(pfds, i, &fd_count);
+                    }
+                    else
+                    {
+                        linebuf[len - 1] = 0;
+
+                        fflush(stdout);
+                        dup2(sock, STDOUT_FILENO);
+
+                        parseArgs(linebuf, &argmain);
+
+                        detach();
+                    }
+                }
             }
-
-            linebuf[len - 1] = 0;
-            parseArgs(linebuf, &argmain);
-
-            svcSleepThread(1e+8L);
         }
-        close(listenfd);
-        detach();
+        svcSleepThread(50 * 1e+7L); //50 ms
     }
 
     if (debughandle != 0)

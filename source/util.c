@@ -12,8 +12,12 @@
 int setupServerSocket()
 {
     int lissock;
+    int yes = 1;
     struct sockaddr_in server;
     lissock = socket(AF_INET, SOCK_STREAM, 0);
+
+    setsockopt(lissock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons(6000);
