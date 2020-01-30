@@ -63,27 +63,6 @@ void fatalLater(Result err)
     svcCloseHandle(srv);
 }
 
-u64 getHeap()
-{
-    MemoryInfo meminfo;
-    memset(&meminfo, 0, sizeof(MemoryInfo));
-
-    u64 lastaddr = 0;
-    u64 curaddr = 0;
-    do
-    {
-        lastaddr = meminfo.addr;
-        u32 pageinfo;
-        svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, meminfo.addr + meminfo.size);
-        if((meminfo.type & MemType_Heap) == MemType_Heap){
-            curaddr = meminfo.addr;
-            break;
-        }
-    } while (lastaddr < meminfo.addr + meminfo.size);
-
-    return curaddr;
-}
-
 u64 parseStringToInt(char* arg){
     if(strlen(arg) > 2){
         if(arg[1] == 'x'){

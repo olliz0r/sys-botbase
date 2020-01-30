@@ -6,11 +6,10 @@ u64 controllerHandle;
 HiddbgHdlsDeviceInfo controllerDevice;
 HiddbgHdlsState controllerState;
 
-int attach();
-void detach();
+void attach();
 
-void poke(u64 addr, u64 size, u8* val);
-void peek(u64 addr, u64 size);
+void poke(u64 offset, u64 size, u8* val);
+void peek(u64 offset, u64 size);
 void click(HidControllerKeys btn);
 void press(HidControllerKeys btn);
 void release(HidControllerKeys btn);

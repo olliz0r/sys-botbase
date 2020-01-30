@@ -89,10 +89,9 @@ int argmain(int argc, char **argv)
             return 0;
 
         attach();
-        u64 addr = getHeap() + parseStringToInt(argv[1]);
+        u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
-        peek(addr, size);
-        detach();
+        peek(offset, size);
     }
 
     //poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex or dec>
@@ -101,11 +100,10 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
         attach();
-        u64 addr = getHeap() + parseStringToInt(argv[1]);
+        u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        poke(addr, size, data);
-        detach();
+        poke(offset, size, data);
     }
 
     //click <buttontype>
@@ -253,16 +251,12 @@ int main()
 
                         parseArgs(linebuf, &argmain);
 
-                        detach();
                     }
                 }
             }
         }
         svcSleepThread(50 * 1e+7L); //50 ms
     }
-
-    if (debughandle != 0)
-        svcCloseHandle(debughandle);
 
     return 0;
 }

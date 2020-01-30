@@ -5,8 +5,7 @@
 #include <math.h>
 #include "commands.h"
 #include "util.h"
-
-Handle debughandle = 0;
+#include "dmntcht.h"
 
 Mutex actionLock;
 
@@ -16,29 +15,14 @@ u64 controllerHandle = 0;
 HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
 
+DmntCheatProcessMetadata metaData;
 
-int attach()
+void attach()
 {
-    if (debughandle != 0)
-        svcCloseHandle(debughandle);
-    u64 pids[300];
-    u32 numProc;
-    svcGetProcessList(&numProc, pids, 300);
-    u64 pid = pids[numProc - 1];
+    dmntchtInitialize();
+    dmntchtForceOpenCheatProcess();
+    dmntchtGetCheatProcessMetadata(&metaData);
 
-    Result rc = svcDebugActiveProcess(&debughandle, pid);
-    if (R_FAILED(rc))
-    {
-        return 1;
-    }
-    return 0;
-}
-
-void detach()
-{
-    if (debughandle != 0)
-        svcCloseHandle(debughandle);
-    debughandle = 0;
 }
 
 void initController()
@@ -68,16 +52,16 @@ void initController()
 
 
 
-void poke(u64 addr, u64 size, u8* val)
+void poke(u64 offset, u64 size, u8* val)
 {
-    Result rc = svcWriteDebugProcessMemory(debughandle, val, addr, size);
+    dmntchtWriteCheatProcessMemory(metaData.heap_extents.base + offset, val, size);
     free(val);
 }
 
-void peek(u64 addr, u64 size)
+void peek(u64 offset, u64 size)
 {
     u8 out[size];
-    Result rc = svcReadDebugProcessMemory(&out, debughandle, addr, size);
+    dmntchtReadCheatProcessMemory(metaData.heap_extents.base + offset, &out, size);
 
     u64 i;
     for (i = 0; i < size; i++)
