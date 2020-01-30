@@ -249,7 +249,7 @@ int main()
                         linebuf[len - 1] = 0;
 
                         fflush(stdout);
-                        dup2(sock, STDOUT_FILENO);
+                        dup2(pfds[i].fd, STDOUT_FILENO);
 
                         parseArgs(linebuf, &argmain);
 
