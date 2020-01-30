@@ -1,5 +1,5 @@
 #include <switch.h>
-#define MAX_LINE_LENGTH 344 * 32
+#define MAX_LINE_LENGTH 344 * 32 * 2
 
 extern int sock;
 
