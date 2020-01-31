@@ -255,7 +255,7 @@ int main()
                 }
             }
         }
-        svcSleepThread(50 * 1e+7L); //50 ms
+        svcSleepThread(50 * 1e+6L); //50 ms
     }
 
     return 0;
