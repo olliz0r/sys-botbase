@@ -7,6 +7,9 @@ HiddbgHdlsDeviceInfo controllerDevice;
 HiddbgHdlsState controllerState;
 
 void attach();
+void detach();
+
+u64 getHeapBaseAddress();
 
 void poke(u64 offset, u64 size, u8* val);
 void peek(u64 offset, u64 size);

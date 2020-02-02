@@ -5,7 +5,6 @@
 #include <math.h>
 #include "commands.h"
 #include "util.h"
-#include "dmntcht.h"
 
 Mutex actionLock;
 
@@ -15,14 +14,42 @@ u64 controllerHandle = 0;
 HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
 
-DmntCheatProcessMetadata metaData;
+Handle debughandle = 0;
 
 void attach()
 {
-    dmntchtInitialize();
-    dmntchtForceOpenCheatProcess();
-    dmntchtGetCheatProcessMetadata(&metaData);
+    u64 pid = 0;
+    pmdmntInitialize();
+    pmdmntGetApplicationProcessId(&pid);
 
+    if (debughandle != 0)
+        svcCloseHandle(debughandle);
+
+    Result rc = svcDebugActiveProcess(&debughandle, pid);
+}
+
+void detach(){
+    if (debughandle != 0)
+        svcCloseHandle(debughandle);
+}
+
+u64 getHeapBaseAddress(){
+    MemoryInfo meminfo;
+    memset(&meminfo, 0, sizeof(MemoryInfo));
+
+    u64 lastaddr = 0;
+    u64 curaddr = 0;
+    do
+    {
+        lastaddr = meminfo.addr;
+        u32 pageinfo;
+        svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, meminfo.addr + meminfo.size);
+        if((meminfo.type & MemType_Heap) == MemType_Heap){
+            curaddr = meminfo.addr;
+            break;
+        }
+    } while (lastaddr < meminfo.addr + meminfo.size);
+    return curaddr;
 }
 
 void initController()
@@ -54,14 +81,18 @@ void initController()
 
 void poke(u64 offset, u64 size, u8* val)
 {
-    dmntchtWriteCheatProcessMemory(metaData.heap_extents.base + offset, val, size);
+    attach();
+    svcWriteDebugProcessMemory(debughandle, val, getHeapBaseAddress() + offset, size);
+    detach();
     free(val);
 }
 
 void peek(u64 offset, u64 size)
 {
     u8 out[size];
-    dmntchtReadCheatProcessMemory(metaData.heap_extents.base + offset, &out, size);
+    attach();
+    svcReadDebugProcessMemory(&out, debughandle, getHeapBaseAddress() + offset, size);
+    detach();
 
     u64 i;
     for (i = 0; i < size; i++)
