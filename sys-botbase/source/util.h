@@ -1,7 +1,7 @@
 #include <switch.h>
 #define MAX_LINE_LENGTH 344 * 32 * 2
 
-extern int sock;
+extern u64 mainLoopSleepTime;
 
 void fatalLater(Result err);
 int setupServerSocket();

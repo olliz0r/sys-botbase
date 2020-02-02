@@ -15,6 +15,7 @@ HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
 
 Handle debughandle = 0;
+u64 buttonClickSleepTime = 50;
 
 void attach()
 {
@@ -106,7 +107,7 @@ void click(HidControllerKeys btn)
 {
     initController();
     press(btn);
-    svcSleepThread(50 * 1e+6L); //50ms = 50 000 000
+    svcSleepThread(buttonClickSleepTime * 1e+6L);
     release(btn);
 }
 void press(HidControllerKeys btn)

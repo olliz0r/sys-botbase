@@ -5,6 +5,7 @@ bool bControllerIsInitialised;
 u64 controllerHandle;
 HiddbgHdlsDeviceInfo controllerDevice;
 HiddbgHdlsState controllerState;
+extern u64 buttonClickSleepTime;
 
 void attach();
 void detach();

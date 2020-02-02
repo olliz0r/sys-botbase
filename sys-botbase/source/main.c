@@ -74,7 +74,7 @@ void __appExit(void)
     socketExit();
 }
 
-int sock = -1;
+u64 mainLoopSleepTime = 0;
 
 int argmain(int argc, char **argv)
 {
@@ -158,12 +158,29 @@ int argmain(int argc, char **argv)
         setStickState(side, dxVal, dyVal);
     }
 
+    //detachController
     if(!strcmp(argv[0], "detachController"))
     {
         hiddbgDetachHdlsVirtualDevice(controllerHandle);
         hiddbgReleaseHdlsWorkBuffer();
         hiddbgExit();
         bControllerIsInitialised = false;
+    }
+
+    //configure <mainLoopSleepTime or buttonClickSleepTime> <time in ms>
+    if(!strcmp(argv[0], "configure")){
+        if(argc != 3)
+            return 0;
+
+        u64 time = parseStringToInt(argv[2]);
+
+        if(!strcmp(argv[1], "mainLoopSleepTime")){
+            mainLoopSleepTime = time;
+        }
+
+        if(!strcmp(argv[1], "buttonClickSleepTime")){
+            buttonClickSleepTime = time;
+        }
     }
 
     if(!strcmp(argv[0], "pixelPeek")){
@@ -332,7 +349,7 @@ int main()
     int newfd;
     while (appletMainLoop())
     {
-        int poll_count = poll(pfds, fd_count, -1);
+        poll(pfds, fd_count, -1);
         for(int i = 0; i < fd_count; i++) 
         {
             if (pfds[i].revents & POLLIN) 
@@ -381,7 +398,7 @@ int main()
                 }
             }
         }
-        svcSleepThread(50 * 1e+6L); //50 ms
+        svcSleepThread(mainLoopSleepTime * 1e+6L);
     }
 
     return 0;
