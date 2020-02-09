@@ -75,6 +75,9 @@ void __appExit(void)
 }
 
 u64 mainLoopSleepTime = 0;
+bool debugResultCodes = false;
+
+bool echoCommands = false;
 
 int argmain(int argc, char **argv)
 {
@@ -161,8 +164,12 @@ int argmain(int argc, char **argv)
     //detachController
     if(!strcmp(argv[0], "detachController"))
     {
-        hiddbgDetachHdlsVirtualDevice(controllerHandle);
-        hiddbgReleaseHdlsWorkBuffer();
+        Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
+        if (R_FAILED(rc) && debugResultCodes)
+            printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
+        rc = hiddbgReleaseHdlsWorkBuffer();
+        if (R_FAILED(rc) && debugResultCodes)
+            printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
         hiddbgExit();
         bControllerIsInitialised = false;
     }
@@ -172,16 +179,28 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
 
-        u64 time = parseStringToInt(argv[2]);
 
         if(!strcmp(argv[1], "mainLoopSleepTime")){
+            u64 time = parseStringToInt(argv[2]);
             mainLoopSleepTime = time;
         }
 
         if(!strcmp(argv[1], "buttonClickSleepTime")){
+            u64 time = parseStringToInt(argv[2]);
             buttonClickSleepTime = time;
         }
+
+        if(!strcmp(argv[1], "echoCommands")){
+            u64 shouldActivate = parseStringToInt(argv[2]);
+            echoCommands = shouldActivate != 0;
+        }
+
+        if(!strcmp(argv[1], "printDebugResultCodes")){
+            u64 shouldActivate = parseStringToInt(argv[2]);
+            debugResultCodes = shouldActivate != 0;
+        }
     }
+
 
     if(!strcmp(argv[0], "pixelPeek")){
         /*
@@ -392,6 +411,10 @@ int main()
                                 dup2(pfds[i].fd, STDOUT_FILENO);
 
                                 parseArgs(linebuf, &argmain);
+
+                                if(echoCommands){
+                                    printf("%s\n",linebuf);
+                                }
                             }
                         }
                     }

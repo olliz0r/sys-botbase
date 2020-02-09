@@ -2,6 +2,7 @@
 #define MAX_LINE_LENGTH 344 * 32 * 2
 
 extern u64 mainLoopSleepTime;
+extern bool debugResultCodes;
 
 void fatalLater(Result err);
 int setupServerSocket();

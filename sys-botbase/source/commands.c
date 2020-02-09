@@ -20,13 +20,19 @@ u64 buttonClickSleepTime = 50;
 void attach()
 {
     u64 pid = 0;
-    pmdmntInitialize();
-    pmdmntGetApplicationProcessId(&pid);
+    Result rc = pmdmntInitialize();
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("pmdmntInitialize: %d\n", rc);
+    rc = pmdmntGetApplicationProcessId(&pid);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("pmdmntGetApplicationProcessId: %d\n", rc);
 
     if (debughandle != 0)
         svcCloseHandle(debughandle);
 
-    Result rc = svcDebugActiveProcess(&debughandle, pid);
+    rc = svcDebugActiveProcess(&debughandle, pid);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("svcDebugActiveProcess: %d\n", rc);
 }
 
 void detach(){
@@ -57,7 +63,9 @@ void initController()
 {
     if(bControllerIsInitialised) return;
     //taken from switchexamples github
-    hiddbgInitialize();
+    Result rc = hiddbgInitialize();
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgInitialize: %d\n", rc);
     // Set the controller type to Pro-Controller, and set the npadInterfaceType.
     controllerDevice.deviceType = HidDeviceType_FullKey3;
     controllerDevice.npadInterfaceType = NpadInterfaceType_Bluetooth;
@@ -73,8 +81,12 @@ void initController()
     controllerState.joysticks[JOYSTICK_LEFT].dy = -0x0;
     controllerState.joysticks[JOYSTICK_RIGHT].dx = 0x0;
     controllerState.joysticks[JOYSTICK_RIGHT].dy = -0x0;
-    hiddbgAttachHdlsWorkBuffer();
-    hiddbgAttachHdlsVirtualDevice(&controllerHandle, &controllerDevice);
+    rc = hiddbgAttachHdlsWorkBuffer();
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgAttachHdlsWorkBuffer: %d\n", rc);
+    rc = hiddbgAttachHdlsVirtualDevice(&controllerHandle, &controllerDevice);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgAttachHdlsVirtualDevice: %d\n", rc);
     bControllerIsInitialised = true;
 }
 
@@ -83,8 +95,10 @@ void initController()
 void poke(u64 offset, u64 size, u8* val)
 {
     attach();
-    svcWriteDebugProcessMemory(debughandle, val, getHeapBaseAddress() + offset, size);
+    Result rc = svcWriteDebugProcessMemory(debughandle, val, getHeapBaseAddress() + offset, size);
     detach();
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("svcWriteDebugProcessMemory: %d\n", rc);
     free(val);
 }
 
@@ -92,8 +106,10 @@ void peek(u64 offset, u64 size)
 {
     u8 out[size];
     attach();
-    svcReadDebugProcessMemory(&out, debughandle, getHeapBaseAddress() + offset, size);
+    Result rc = svcReadDebugProcessMemory(&out, debughandle, getHeapBaseAddress() + offset, size);
     detach();
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("svcReadDebugProcessMemory: %d\n", rc);
 
     u64 i;
     for (i = 0; i < size; i++)
