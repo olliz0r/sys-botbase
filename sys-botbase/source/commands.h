@@ -1,4 +1,5 @@
 #include <switch.h>
+#include "dmntcht.h"
 
 extern Handle debughandle;
 bool bControllerIsInitialised;
@@ -7,10 +8,9 @@ HiddbgHdlsDeviceInfo controllerDevice;
 HiddbgHdlsState controllerState;
 extern u64 buttonClickSleepTime;
 
-void attach();
-void detach();
+extern DmntCheatProcessMetadata metaData;
 
-u64 getHeapBaseAddress();
+void attach();
 
 void poke(u64 offset, u64 size, u8* val);
 void peek(u64 offset, u64 size);

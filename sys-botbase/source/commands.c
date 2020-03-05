@@ -5,6 +5,7 @@
 #include <math.h>
 #include "commands.h"
 #include "util.h"
+#include "dmntcht.h"
 
 Mutex actionLock;
 
@@ -17,46 +18,19 @@ HiddbgHdlsState controllerState = {0};
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
 
+DmntCheatProcessMetadata metaData;
+
 void attach()
 {
-    u64 pid = 0;
-    Result rc = pmdmntInitialize();
+    Result rc = dmntchtInitialize();
     if (R_FAILED(rc) && debugResultCodes)
-        printf("pmdmntInitialize: %d\n", rc);
-    rc = pmdmntGetApplicationProcessId(&pid);
+        printf("dmntchtInitialize: %d\n", rc);
+    rc = dmntchtForceOpenCheatProcess();
     if (R_FAILED(rc) && debugResultCodes)
-        printf("pmdmntGetApplicationProcessId: %d\n", rc);
-
-    if (debughandle != 0)
-        svcCloseHandle(debughandle);
-
-    rc = svcDebugActiveProcess(&debughandle, pid);
+        printf("dmntchtForceOpenCheatProcess: %d\n", rc);
+    rc = dmntchtGetCheatProcessMetadata(&metaData);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("svcDebugActiveProcess: %d\n", rc);
-}
-
-void detach(){
-    if (debughandle != 0)
-        svcCloseHandle(debughandle);
-}
-
-u64 getHeapBaseAddress(){
-    MemoryInfo meminfo;
-    memset(&meminfo, 0, sizeof(MemoryInfo));
-
-    u64 lastaddr = 0;
-    u64 curaddr = 0;
-    do
-    {
-        lastaddr = meminfo.addr;
-        u32 pageinfo;
-        svcQueryDebugProcessMemory(&meminfo, &pageinfo, debughandle, meminfo.addr + meminfo.size);
-        if((meminfo.type & MemType_Heap) == MemType_Heap){
-            curaddr = meminfo.addr;
-            break;
-        }
-    } while (lastaddr < meminfo.addr + meminfo.size);
-    return curaddr;
+        printf("dmntchtGetCheatProcessMetadata: %d\n", rc);
 }
 
 void initController()
@@ -94,22 +68,17 @@ void initController()
 
 void poke(u64 offset, u64 size, u8* val)
 {
-    attach();
-    Result rc = svcWriteDebugProcessMemory(debughandle, val, getHeapBaseAddress() + offset, size);
-    detach();
+    Result rc = dmntchtWriteCheatProcessMemory(offset, val, size);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("svcWriteDebugProcessMemory: %d\n", rc);
-    free(val);
+        printf("dmntchtWriteCheatProcessMemory: %d\n", rc);
 }
 
 void peek(u64 offset, u64 size)
 {
     u8 out[size];
-    attach();
-    Result rc = svcReadDebugProcessMemory(&out, debughandle, getHeapBaseAddress() + offset, size);
-    detach();
+    Result rc = dmntchtReadCheatProcessMemory(offset, &out, size);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("svcReadDebugProcessMemory: %d\n", rc);
+        printf("dmntchtReadCheatProcessMemory: %d\n", rc);
 
     u64 i;
     for (i = 0; i < size; i++)

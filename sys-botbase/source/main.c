@@ -74,7 +74,7 @@ void __appExit(void)
     socketExit();
 }
 
-u64 mainLoopSleepTime = 0;
+u64 mainLoopSleepTime = 50;
 bool debugResultCodes = false;
 
 bool echoCommands = false;
@@ -94,6 +94,17 @@ int argmain(int argc, char **argv)
         attach();
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
+        peek(metaData.heap_extents.base + offset, size);
+    }
+
+    if (!strcmp(argv[0], "peekAbsolute"))
+    {
+        if(argc != 3)
+            return 0;
+
+        attach();
+        u64 offset = parseStringToInt(argv[1]);
+        u64 size = parseStringToInt(argv[2]);
         peek(offset, size);
     }
 
@@ -106,7 +117,20 @@ int argmain(int argc, char **argv)
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
+        poke(metaData.heap_extents.base + offset, size, data);
+        free(data);
+    } 
+    
+    if (!strcmp(argv[0], "pokeAbsolute"))
+    {
+        if(argc != 3)
+            return 0;
+        attach();
+        u64 offset = parseStringToInt(argv[1]);
+        u64 size = 0;
+        u8* data = parseStringToByteBuffer(argv[2], &size);
         poke(offset, size, data);
+        free(data);
     }
 
     //click <buttontype>
@@ -201,6 +225,25 @@ int argmain(int argc, char **argv)
         }
     }
 
+    if(!strcmp(argv[0], "getTitleID")){
+        attach();
+        printf("%16lX\n", metaData.title_id);
+    }
+
+    if(!strcmp(argv[0], "getSystemLanguage")){
+        //thanks zaksa
+        setInitialize();
+        u64 languageCode = 0;   
+        SetLanguage language = SetLanguage_ENUS;
+        setGetSystemLanguage(&languageCode);   
+        setMakeLanguage(languageCode, &language);
+        printf("%d\n", language);
+    }
+
+    if(!strcmp(argv[0], "getHeapBase")){
+        attach();
+        printf("%16lX\n", metaData.heap_extents.base);
+    }
 
     if(!strcmp(argv[0], "pixelPeek")){
         /*
@@ -350,7 +393,6 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
 
 int main()
 {
-
     char *linebuf = malloc(sizeof(char) * MAX_LINE_LENGTH);
 
     int c = sizeof(struct sockaddr_in);
@@ -393,7 +435,7 @@ int main()
                     bool readEnd = false;
                     int readBytesSoFar = 0;
                     while(!readEnd){
-                        int len = recv(pfds[i].fd, &linebuf[readBytesSoFar], MAX_LINE_LENGTH, 0);
+                        int len = recv(pfds[i].fd, &linebuf[readBytesSoFar], 1, 0);
                         if(len <= 0)
                         {
                             close(pfds[i].fd);
