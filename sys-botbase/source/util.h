@@ -4,7 +4,6 @@
 extern u64 mainLoopSleepTime;
 extern bool debugResultCodes;
 
-void fatalLater(Result err);
 int setupServerSocket();
 u64 parseStringToInt(char* arg);
 u8* parseStringToByteBuffer(char* arg, u64* size);

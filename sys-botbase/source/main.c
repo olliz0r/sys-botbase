@@ -39,7 +39,7 @@ void __appInit(void)
     svcSleepThread(20000000000L);
     rc = smInitialize();
     if (R_FAILED(rc))
-        fatalLater(rc);
+        fatalThrow(rc);
     if (hosversionGet() == 0) {
         rc = setsysInitialize();
         if (R_SUCCEEDED(rc)) {
@@ -52,16 +52,16 @@ void __appInit(void)
     }
     rc = fsInitialize();
     if (R_FAILED(rc))
-        fatalLater(rc);
+        fatalThrow(rc);
     rc = fsdevMountSdmc();
     if (R_FAILED(rc))
-        fatalLater(rc);
+        fatalThrow(rc);
     rc = timeInitialize();
     if (R_FAILED(rc))
-        fatalLater(rc);
+        fatalThrow(rc);
     rc = socketInitializeDefault();
     if (R_FAILED(rc))
-        fatalLater(rc);
+        fatalThrow(rc);
 }
 
 void __appExit(void)
