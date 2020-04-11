@@ -12,7 +12,7 @@ TARGET		:=	sys-botbase
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
-INCLUDES	:=	include ../Atmosphere-libs/libstratosphere/source/dmnt
+INCLUDES	:=	include ../Atmosphere-libs/libstratosphere/source/dmnt ../Atmosphere-libs/libstratosphere/source/pm
 EXEFS_SRC	:=	exefs_src
 
 ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE

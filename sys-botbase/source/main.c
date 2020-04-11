@@ -12,6 +12,7 @@
 #include "args.h"
 #include "util.h"
 #include <poll.h>
+#include "pm_ams.h"
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
@@ -227,6 +228,11 @@ int argmain(int argc, char **argv)
 
     if(!strcmp(argv[0], "getTitleID")){
         attach();
+        Handle h;
+        void *out_loc;
+        void *out_status;
+        u64 id;
+        pmdmntAtmosphereGetProcessInfo(&h, out_loc, out_status, id);
         printf("%16lX\n", metaData.title_id);
     }
 
