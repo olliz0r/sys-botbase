@@ -245,10 +245,15 @@ int argmain(int argc, char **argv)
         setMakeLanguage(languageCode, &language);
         printf("%d\n", language);
     }
+ 
+    if(!strcmp(argv[0], "getMainNsoBase")){
+        attach();
+        printf("%016lX\n", metaData.main_nso_extents.base);
+    }
 
     if(!strcmp(argv[0], "getHeapBase")){
         attach();
-        printf("%16lX\n", metaData.heap_extents.base);
+        printf("%016lX\n", metaData.heap_extents.base);
     }
 
     if(!strcmp(argv[0], "pixelPeek")){
