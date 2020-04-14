@@ -228,11 +228,6 @@ int argmain(int argc, char **argv)
 
     if(!strcmp(argv[0], "getTitleID")){
         attach();
-        Handle h;
-        void *out_loc;
-        void *out_status;
-        u64 id;
-        pmdmntAtmosphereGetProcessInfo(&h, out_loc, out_status, id);
         printf("%16lX\n", metaData.title_id);
     }
 
