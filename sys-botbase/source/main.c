@@ -107,14 +107,11 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
 
-        u64 heap_base = 0;
-        u64 main_nso_base = 0;
-        u64 titleID = 0;
-        getMetaData(&heap_base, &main_nso_base, &titleID);
+        MetaData meta = getMetaData();
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
-        peek(heap_base + offset, size);
+        peek(meta.heap_base + offset, size);
     }
 
     if (!strcmp(argv[0], "peekAbsolute"))
@@ -132,14 +129,11 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
 
-        u64 heap_base = 0;
-        u64 main_nso_base = 0;
-        u64 titleID = 0;
-        getMetaData(&heap_base, &main_nso_base, &titleID);
+        MetaData meta = getMetaData();
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
-        peek(main_nso_base + offset, size);
+        peek(meta.main_nso_base + offset, size);
     }
 
     //poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex or dec>
@@ -148,15 +142,12 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
             
-        u64 heap_base = 0;
-        u64 main_nso_base = 0;
-        u64 titleID = 0;
-        getMetaData(&heap_base, &main_nso_base, &titleID);
+        MetaData meta = getMetaData();
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        poke(heap_base + offset, size, data);
+        poke(meta.heap_base + offset, size, data);
         free(data);
     } 
     
@@ -177,15 +168,12 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
             
-        u64 heap_base = 0;
-        u64 main_nso_base = 0;
-        u64 titleID = 0;
-        getMetaData(&heap_base, &main_nso_base, &titleID);
+        MetaData meta = getMetaData();
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        poke(main_nso_base + offset, size, data);
+        poke(meta.main_nso_base + offset, size, data);
         free(data);
     } 
 
@@ -282,11 +270,8 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getTitleID")){
-        u64 heap_base = 0;
-        u64 main_nso_base = 0;
-        u64 titleID = 0;
-        getMetaData(&heap_base, &main_nso_base, &titleID);
-        printf("%16lX\n", titleID);
+        MetaData meta = getMetaData();
+        printf("%16lX\n", meta.titleID);
     }
 
     if(!strcmp(argv[0], "getSystemLanguage")){
@@ -300,27 +285,25 @@ int argmain(int argc, char **argv)
     }
  
     if(!strcmp(argv[0], "getMainNsoBase")){
-        u64 heap_base = 0;
-        u64 main_nso_base = 0;
-        u64 titleID = 0;
-        getMetaData(&heap_base, &main_nso_base, &titleID);
-        printf("%16lX\n", main_nso_base);
+        MetaData meta = getMetaData();
+        printf("%16lX\n", meta.main_nso_base);
+    }
+    
+    if(!strcmp(argv[0], "getBuildID")){
+        MetaData meta = getMetaData();
+        printf("%.8s\n", meta.buildID);
+
     }
 
     if(!strcmp(argv[0], "getHeapBase")){
-        u64 heap_base = 0;
-        u64 main_nso_base = 0;
-        u64 titleID = 0;
-        getMetaData(&heap_base, &main_nso_base, &titleID);
-        printf("%16lX\n", heap_base);
+        MetaData meta = getMetaData();
+        printf("%16lX\n", meta.heap_base);
     }
 
     if(!strcmp(argv[0], "pixelPeek")){
-        return 0; //errors with 0x668CE, unless debugunit flag is patched
-        if(argc != 2)
-            return 0;
-        u64 bSize = parseStringToInt(argv[1]);
-        char* buf = malloc(bSize); //gotta figure out a good buffersize
+        //errors with 0x668CE, unless debugunit flag is patched
+        u64 bSize = 0x7D000;
+        char* buf = malloc(bSize); 
         u64 outSize = 0;
 
         Result rc = capsscCaptureForDebug(buf, bSize, &outSize);

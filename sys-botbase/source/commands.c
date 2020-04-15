@@ -80,18 +80,37 @@ u64 getTitleId(u64 pid){
     return titleId;
 }
 
-void getMetaData(u64* heap_base, u64* main_nso_base, u64* titleID){
+void getBuildID(MetaData* meta, u64 pid){
+    LoaderModuleInfo proc_modules[2];
+    s32 numModules = 0;
+    Result rc = ldrDmntGetProcessModuleInfo(pid, proc_modules, 2, &numModules);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
+
+    LoaderModuleInfo *proc_module = 0;
+    if(numModules == 2){
+        proc_module = &proc_modules[1];
+    }else{
+        proc_module = &proc_modules[0];
+    }
+    memcpy(meta->buildID, proc_module->build_id, 0x20);
+}
+
+MetaData getMetaData(){
+    MetaData meta;
     attach();
     u64 pid = 0;    
     Result rc = pmdmntGetApplicationProcessId(&pid);
     if (R_FAILED(rc) && debugResultCodes)
         printf("pmdmntGetApplicationProcessId: %d\n", rc);
     
-    *main_nso_base = getMainNsoBase(pid);
-    *heap_base = getHeapBase(debughandle);
-    *titleID = getTitleId(pid);
+    meta.main_nso_base = getMainNsoBase(pid);
+    meta.heap_base =  getHeapBase(debughandle);
+    meta.titleID = getTitleId(pid);
+    getBuildID(&meta, pid);
 
     detach();
+    return meta;
 }
 
 void initController()
