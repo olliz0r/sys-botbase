@@ -8,3 +8,4 @@ int setupServerSocket();
 u64 parseStringToInt(char* arg);
 u8* parseStringToByteBuffer(char* arg, u64* size);
 HidControllerKeys parseStringToButton(char* arg);
+Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size); //big thanks to Behemoth from the Reswitched Discord!

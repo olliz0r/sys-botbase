@@ -5,7 +5,6 @@
 #include <math.h>
 #include "commands.h"
 #include "util.h"
-#include "dmntcht.h"
 
 Mutex actionLock;
 
@@ -18,19 +17,81 @@ HiddbgHdlsState controllerState = {0};
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
 
-DmntCheatProcessMetadata metaData;
-
 void attach()
 {
-    Result rc = dmntchtInitialize();
+    u64 pid = 0;
+    Result rc = pmdmntGetApplicationProcessId(&pid);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("dmntchtInitialize: %d\n", rc);
-    rc = dmntchtForceOpenCheatProcess();
+        printf("pmdmntGetApplicationProcessId: %d\n", rc);
+
+    if (debughandle != 0)
+        svcCloseHandle(debughandle);
+
+    rc = svcDebugActiveProcess(&debughandle, pid);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("dmntchtForceOpenCheatProcess: %d\n", rc);
-    rc = dmntchtGetCheatProcessMetadata(&metaData);
+        printf("svcDebugActiveProcess: %d\n", rc);
+}
+
+void detach(){
+    if (debughandle != 0)
+        svcCloseHandle(debughandle);
+}
+
+u64 getMainNsoBase(u64 pid){
+    LoaderModuleInfo proc_modules[2];
+    s32 numModules = 0;
+    Result rc = ldrDmntGetProcessModuleInfo(pid, proc_modules, 2, &numModules);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("dmntchtGetCheatProcessMetadata: %d\n", rc);
+        printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
+
+    LoaderModuleInfo *proc_module = 0;
+    if(numModules == 2){
+        proc_module = &proc_modules[1];
+    }else{
+        proc_module = &proc_modules[0];
+    }
+    return proc_module->base_address;
+}
+
+u64 getHeapBase(Handle handle){
+    MemoryInfo meminfo;
+    memset(&meminfo, 0, sizeof(MemoryInfo));
+    u64 heap_base = 0;
+    u64 lastaddr = 0;
+    do
+    {
+        lastaddr = meminfo.addr;
+        u32 pageinfo;
+        svcQueryDebugProcessMemory(&meminfo, &pageinfo, handle, meminfo.addr + meminfo.size);
+        if((meminfo.type & MemType_Heap) == MemType_Heap){
+            heap_base = meminfo.addr;
+            break;
+        }
+    } while (lastaddr < meminfo.addr + meminfo.size);
+
+    return heap_base;
+}
+
+u64 getTitleId(u64 pid){
+    u64 titleId = 0;
+    Result rc = pminfoGetProgramId(&titleId, pid);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("pminfoGetProgramId: %d\n", rc);
+    return titleId;
+}
+
+void getMetaData(u64* heap_base, u64* main_nso_base, u64* titleID){
+    attach();
+    u64 pid = 0;    
+    Result rc = pmdmntGetApplicationProcessId(&pid);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("pmdmntGetApplicationProcessId: %d\n", rc);
+    
+    *main_nso_base = getMainNsoBase(pid);
+    *heap_base = getHeapBase(debughandle);
+    *titleID = getTitleId(pid);
+
+    detach();
 }
 
 void initController()
@@ -68,17 +129,21 @@ void initController()
 
 void poke(u64 offset, u64 size, u8* val)
 {
-    Result rc = dmntchtWriteCheatProcessMemory(offset, val, size);
+    attach();
+    Result rc = svcWriteDebugProcessMemory(debughandle, val, offset, size);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("dmntchtWriteCheatProcessMemory: %d\n", rc);
+        printf("svcWriteDebugProcessMemory: %d\n", rc);
+    detach();
 }
 
 void peek(u64 offset, u64 size)
 {
     u8 out[size];
-    Result rc = dmntchtReadCheatProcessMemory(offset, &out, size);
+    attach();
+    Result rc = svcReadDebugProcessMemory(&out, debughandle, offset, size);
     if (R_FAILED(rc) && debugResultCodes)
-        printf("dmntchtReadCheatProcessMemory: %d\n", rc);
+        printf("svcReadDebugProcessMemory: %d\n", rc);
+    detach();
 
     u64 i;
     for (i = 0; i < size; i++)

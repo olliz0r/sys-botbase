@@ -164,3 +164,14 @@ HidControllerKeys parseStringToButton(char* arg)
     }
     return KEY_A; //I guess lol
 }
+
+Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {
+    struct {
+        u32 a;
+        u64 b;
+    } in = {0, 10000000000};
+    return serviceDispatchInOut(capsscGetServiceSession(), 1204, in, *size,
+        .buffer_attrs = {SfBufferAttr_HipcMapTransferAllowsNonSecure | SfBufferAttr_HipcMapAlias | SfBufferAttr_Out},
+        .buffers = { { buffer, buffer_size } },
+    );
+}

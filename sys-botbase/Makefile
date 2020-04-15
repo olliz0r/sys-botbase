@@ -12,7 +12,7 @@ TARGET		:=	sys-botbase
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
-INCLUDES	:=	include ../Atmosphere-libs/libstratosphere/source/dmnt ../Atmosphere-libs/libstratosphere/source/pm
+INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
 
 ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
@@ -27,9 +27,9 @@ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= -lm -lstratosphere -lnx
+LIBS	:= -lm -lnx
 
-LIBDIRS	:= $(PORTLIBS) $(LIBNX) $(CURDIR)/../Atmosphere-libs/libstratosphere $(CURDIR)/../Atmosphere-libs/libvapours
+LIBDIRS	:= $(PORTLIBS) $(LIBNX)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 

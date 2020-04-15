@@ -12,7 +12,6 @@
 #include "args.h"
 #include "util.h"
 #include <poll.h>
-#include "pm_ams.h"
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
@@ -60,7 +59,23 @@ void __appInit(void)
     rc = timeInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
+    rc = pmdmntInitialize();
+	if (R_FAILED(rc)) {
+        fatalThrow(rc);
+	}
+    rc = ldrDmntInitialize();
+	if (R_FAILED(rc)) {
+		fatalThrow(rc);
+	}
+    rc = pminfoInitialize();
+	if (R_FAILED(rc)) {
+		fatalThrow(rc);
+	}
     rc = socketInitializeDefault();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+
+    rc = capsscInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
 }
@@ -92,10 +107,14 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
 
-        attach();
+        u64 heap_base = 0;
+        u64 main_nso_base = 0;
+        u64 titleID = 0;
+        getMetaData(&heap_base, &main_nso_base, &titleID);
+
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
-        peek(metaData.heap_extents.base + offset, size);
+        peek(heap_base + offset, size);
     }
 
     if (!strcmp(argv[0], "peekAbsolute"))
@@ -103,10 +122,24 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
 
-        attach();
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
         peek(offset, size);
+    }
+
+    if (!strcmp(argv[0], "peekMain"))
+    {
+        if(argc != 3)
+            return 0;
+
+        u64 heap_base = 0;
+        u64 main_nso_base = 0;
+        u64 titleID = 0;
+        getMetaData(&heap_base, &main_nso_base, &titleID);
+
+        u64 offset = parseStringToInt(argv[1]);
+        u64 size = parseStringToInt(argv[2]);
+        peek(main_nso_base + offset, size);
     }
 
     //poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex or dec>
@@ -114,11 +147,16 @@ int argmain(int argc, char **argv)
     {
         if(argc != 3)
             return 0;
-        attach();
+            
+        u64 heap_base = 0;
+        u64 main_nso_base = 0;
+        u64 titleID = 0;
+        getMetaData(&heap_base, &main_nso_base, &titleID);
+
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        poke(metaData.heap_extents.base + offset, size, data);
+        poke(heap_base + offset, size, data);
         free(data);
     } 
     
@@ -126,13 +164,30 @@ int argmain(int argc, char **argv)
     {
         if(argc != 3)
             return 0;
-        attach();
+
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
         poke(offset, size, data);
         free(data);
     }
+        
+    if (!strcmp(argv[0], "pokeMain"))
+    {
+        if(argc != 3)
+            return 0;
+            
+        u64 heap_base = 0;
+        u64 main_nso_base = 0;
+        u64 titleID = 0;
+        getMetaData(&heap_base, &main_nso_base, &titleID);
+
+        u64 offset = parseStringToInt(argv[1]);
+        u64 size = 0;
+        u8* data = parseStringToByteBuffer(argv[2], &size);
+        poke(main_nso_base + offset, size, data);
+        free(data);
+    } 
 
     //click <buttontype>
     if (!strcmp(argv[0], "click"))
@@ -227,8 +282,11 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getTitleID")){
-        attach();
-        printf("%16lX\n", metaData.title_id);
+        u64 heap_base = 0;
+        u64 main_nso_base = 0;
+        u64 titleID = 0;
+        getMetaData(&heap_base, &main_nso_base, &titleID);
+        printf("%16lX\n", titleID);
     }
 
     if(!strcmp(argv[0], "getSystemLanguage")){
@@ -242,135 +300,42 @@ int argmain(int argc, char **argv)
     }
  
     if(!strcmp(argv[0], "getMainNsoBase")){
-        attach();
-        printf("%016lX\n", metaData.main_nso_extents.base);
+        u64 heap_base = 0;
+        u64 main_nso_base = 0;
+        u64 titleID = 0;
+        getMetaData(&heap_base, &main_nso_base, &titleID);
+        printf("%16lX\n", main_nso_base);
     }
 
     if(!strcmp(argv[0], "getHeapBase")){
-        attach();
-        printf("%016lX\n", metaData.heap_extents.base);
+        u64 heap_base = 0;
+        u64 main_nso_base = 0;
+        u64 titleID = 0;
+        getMetaData(&heap_base, &main_nso_base, &titleID);
+        printf("%16lX\n", heap_base);
     }
 
     if(!strcmp(argv[0], "pixelPeek")){
-        /*
-        //take a screenshot:
-        click(KEY_CAPTURE);
-        svcSleepThread(300 * 1e+6L);
-        capsaInitialize();
+        return 0; //errors with 0x668CE, unless debugunit flag is patched
+        if(argc != 2)
+            return 0;
+        u64 bSize = parseStringToInt(argv[1]);
+        char* buf = malloc(bSize); //gotta figure out a good buffersize
+        u64 outSize = 0;
 
-        u64 fileCount = 0;
-        capsaGetAlbumFileCount(CapsAlbumStorage.CapsAlbumStorage_Sd, &fileCount);
+        Result rc = capsscCaptureForDebug(buf, bSize, &outSize);
 
-        CapsAlbumEntry *entries = malloc(sizeof(CapsAlbumEntry) * fileCount);
-
-        capsaGetAlbumFileList(CapsAlbumStorage.CapsAlbumStorage_Sd, &fileCount, entries, fileCount);
-
-        CapsAlbumEntry entry = entries[fileCount - 1]; //latest entry?
-
-        u64 fileSize = 0;
-        capsaGetAlbumFileSize(entry.file_id, &fileSize);
-
-        char *workBuf = malloc(fileSize);
-
-        u64 imageBufferSize = 4 * 1280 * 720; 
-        char *imageBuf = malloc(imageBufferSize);
-
-        capsaLoadAlbumScreenShotImage(NULL, NULL, entry.file_id, imageBuf, imageBufferSize, workBuf, fileSize);
-
-        printf("0,0: A %d, B %d, G %d, R %d\n", imageBuf[0], imageBuf[1], imageBuf[2], imageBuf[3]); //??
-        capsaDeleteAlbumFile(entry.file_id);
-        free(entries);
-        free(workBuf);
-        free(imageBuf);
-
-
-        */
-        /*
-        int width, height, bpp;
-
-        uint8_t* rgb_image = stbi_load("image.png", &width, &height, &bpp, 3);
-
-        stbi_image_free(rgb_image);
-        */
-
-        //typedef enum {
-        //    CapsAlbumStorage_Nand = 0,                  ///< Nand
-        //    CapsAlbumStorage_Sd   = 1,                  ///< Sd
-        //} CapsAlbumStorage;
-
-        /// Initialize caps:a.
-        //Result capsaInitialize(void);
-
-
-        /**
-         * @brief Gets a listing of \ref CapsAlbumEntry, where the AlbumFile's storage matches the input one.
-         * @param[in] storage \ref CapsAlbumStorage
-         * @param[out] out Total output entries.
-         * @param[out] entries Output array of \ref CapsAlbumEntry.
-         * @param[in] count Reserved entry count.
-         */
-        //Result capsaGetAlbumFileList(CapsAlbumStorage storage, u64 *out, CapsAlbumEntry *entries, u64 count);
-
-
-        /**
-         * @brief Gets the size for the specified AlbumFile.
-         * @param[in] file_id \ref CapsAlbumFileId
-         * @param[out] size Size of the file.
-         */
-        //Result capsaGetAlbumFileSize(const CapsAlbumFileId *file_id, u64 *size);
-
-        /**
-         * @brief Loads a file into the specified buffer.
-         * @param[in] file_id \ref CapsAlbumFileId
-         * @param[out] out_size Size of the AlbumFile.
-         * @param[out] filebuf File output buffer.
-         * @param[in] filebuf_size Size of the filebuf.
-         */
-        //Result capsaLoadAlbumFile(const CapsAlbumFileId *file_id, u64 *out_size, void* filebuf, u64 filebuf_size);
-
-        /**
-         * @brief Load the ScreenShotImage for the specified AlbumFile.
-         * @note Only available on [2.0.0+].
-         * @param[out] width Output image width. Optional, can be NULL.
-         * @param[out] height Output image height. Optional, can be NULL.
-         * @param[in] file_id \ref CapsAlbumFileId
-         * @param[out] image RGBA8 image output buffer.
-         * @param[in] image_size Image buffer size, should be at least large enough for RGBA8 1280x720.
-         * @param[out] workbuf Work buffer, cleared to 0 by the cmd before it returns.
-         * @param[in] workbuf_size Work buffer size, must be at least the size of the JPEG within the AlbumFile.
-         */
-        //Result capsaLoadAlbumScreenShotImage(u64 *width, u64 *height, const CapsAlbumFileId *file_id, void* image, u64 image_size, void* workbuf, u64 workbuf_size);
-
-
-
-
-
-        /**
-         * @brief Deletes an AlbumFile corresponding to the specified \ref CapsAlbumFileId.
-         * @param[in] file_id \ref CapsAlbumFileId
-         */
-        //Result capsaDeleteAlbumFile(const CapsAlbumFileId *file_id);
-
-
-
-
-
-        /// Initialize caps:dc
-        //Result capsdcInitialize(void);
-        /**
-        * @brief Decodes a jpeg buffer into RGBX.
-        * @param[in] width Image width.
-        * @param[in] height Image height.
-        * @param[in] opts \ref CapsScreenShotDecodeOption.
-        * @param[in] jpeg Jpeg image input buffer.
-        * @param[in] jpeg_size Input image buffer size.
-        * @param[out] out_image RGBA8 image output buffer.
-        * @param[in] out_image_size Output image buffer size, should be at least large enough for RGBA8 width x height.
-        */
-        //Result capsdcDecodeJpeg(u32 width, u32 height, const CapsScreenShotDecodeOption *opts, const void* jpeg, size_t jpeg_size, void* out_image, size_t out_image_size);
-
+        if (R_FAILED(rc) && debugResultCodes)
+            printf("capssc, 1204: %d\n", rc);
         
+        u64 i;
+        for (i = 0; i < outSize; i++)
+        {
+            printf("%02X", buf[i]);
+        }
+        printf("\n");
 
+        free(buf);
     }
 
     return 0;
