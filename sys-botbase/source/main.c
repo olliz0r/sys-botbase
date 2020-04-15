@@ -291,7 +291,7 @@ int argmain(int argc, char **argv)
     
     if(!strcmp(argv[0], "getBuildID")){
         MetaData meta = getMetaData();
-        printf("%.8s\n", meta.buildID);
+        printf("%02x%02x%02x%02x%02x%02x%02x%02x\n", meta.buildID[0], meta.buildID[1], meta.buildID[2], meta.buildID[3], meta.buildID[4], meta.buildID[5], meta.buildID[6], meta.buildID[7]);
 
     }
 
