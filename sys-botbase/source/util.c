@@ -137,7 +137,7 @@ HidControllerKeys parseStringToButton(char *arg) {
   } else if (strcmp(arg, "CAPTURE") == 0) {
     return KEY_CAPTURE;
   }
-  return KEY_A;  // I guess lol
+  return KEY_A;
 }
 
 Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {

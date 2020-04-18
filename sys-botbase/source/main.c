@@ -32,18 +32,18 @@
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
 
-// we aren't an applet
+/* we aren't an applet */
 u32 __nx_applet_type = AppletType_None;
 
-// setup a fake heap (we don't need the heap anyway)
+/* setup a fake heap (we don't need the heap anyway) */
 char fake_heap[HEAP_SIZE];
 
-// we override libnx internals to do a minimal init
+/* we override libnx internals to do a minimal init */
 void __libnx_initheap(void) {
   extern char *fake_heap_start;
   extern char *fake_heap_end;
 
-  // setup newlib fake heap
+  /* setup newlib fake heap */
   fake_heap_start = fake_heap;
   fake_heap_end = fake_heap + HEAP_SIZE;
 }
@@ -105,7 +105,7 @@ bool echoCommands = false;
 int argmain(int argc, char **argv) {
   if (argc == 0) return 0;
 
-  // peek <address in hex or dec> <amount of bytes in hex or dec>
+  /* peek <address in hex or dec> <amount of bytes in hex or dec> */
   if (!strcmp(argv[0], "peek")) {
     if (argc != 3) return 0;
 
@@ -134,8 +134,8 @@ int argmain(int argc, char **argv) {
     peek(meta.main_nso_base + offset, size);
   }
 
-  // poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex
-  // or dec>
+  /* poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex
+   or dec> */
   if (!strcmp(argv[0], "poke")) {
     if (argc != 3) return 0;
 
@@ -170,28 +170,28 @@ int argmain(int argc, char **argv) {
     free(data);
   }
 
-  // click <buttontype>
+  /* click <buttontype> */
   if (!strcmp(argv[0], "click")) {
     if (argc != 2) return 0;
     HidControllerKeys key = parseStringToButton(argv[1]);
     click(key);
   }
 
-  // hold <buttontype>
+  /* hold <buttontype> */
   if (!strcmp(argv[0], "press")) {
     if (argc != 2) return 0;
     HidControllerKeys key = parseStringToButton(argv[1]);
     press(key);
   }
 
-  // release <buttontype>
+  /* release <buttontype> */
   if (!strcmp(argv[0], "release")) {
     if (argc != 2) return 0;
     HidControllerKeys key = parseStringToButton(argv[1]);
     release(key);
   }
 
-  // setStick <left or right stick> <x value> <y value>
+  /* setStick <left or right stick> <x value> <y value> */
   if (!strcmp(argv[0], "setStick")) {
     if (argc != 4) return 0;
 
@@ -214,7 +214,7 @@ int argmain(int argc, char **argv) {
     setStickState(side, dxVal, dyVal);
   }
 
-  // detachController
+  /* detachController */
   if (!strcmp(argv[0], "detachController")) {
     Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
     if (R_FAILED(rc) && debugResultCodes)
@@ -226,7 +226,7 @@ int argmain(int argc, char **argv) {
     bControllerIsInitialised = false;
   }
 
-  // configure <mainLoopSleepTime or buttonClickSleepTime> <time in ms>
+  /* configure <mainLoopSleepTime or buttonClickSleepTime> <time in ms> */
   if (!strcmp(argv[0], "configure")) {
     if (argc != 3) return 0;
 
@@ -284,7 +284,7 @@ int argmain(int argc, char **argv) {
   }
 
   if (!strcmp(argv[0], "pixelPeek")) {
-    // errors with 0x668CE, unless debugunit flag is patched
+    /* errors with 0x668CE, unless debugunit flag is patched */
     u64 bSize = 0x7D000;
     char *buf = malloc(bSize);
     u64 outSize = 0;

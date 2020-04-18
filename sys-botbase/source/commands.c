@@ -24,7 +24,7 @@
 
 Mutex actionLock;
 
-// Controller:
+/* Controller: */
 bool bControllerIsInitialised = false;
 u64 controllerHandle = 0;
 HiddbgHdlsDeviceInfo controllerDevice = {0};
@@ -127,20 +127,20 @@ MetaData getMetaData() {
 
 void initController() {
   if (bControllerIsInitialised) return;
-  // taken from switchexamples github
+  /* taken from switchexamples github */
   Result rc = hiddbgInitialize();
   if (R_FAILED(rc) && debugResultCodes) printf("hiddbgInitialize: %d\n", rc);
-  // Set the controller type to Pro-Controller, and set the npadInterfaceType.
+  /* Set the controller type to Pro-Controller, and set the npadInterfaceType. */
   controllerDevice.deviceType = HidDeviceType_FullKey3;
   controllerDevice.npadInterfaceType = NpadInterfaceType_Bluetooth;
-  // Set the controller colors. The grip colors are for Pro-Controller on
-  // [9.0.0+].
+  /* Set the controller colors. The grip colors are for Pro-Controller on
+   [9.0.0+]. */
   controllerDevice.singleColorBody = RGBA8_MAXALPHA(255, 255, 255);
   controllerDevice.singleColorButtons = RGBA8_MAXALPHA(0, 0, 0);
   controllerDevice.colorLeftGrip = RGBA8_MAXALPHA(230, 255, 0);
   controllerDevice.colorRightGrip = RGBA8_MAXALPHA(0, 40, 20);
 
-  // Setup example controller state.
+  /* Setup example controller state. */
   controllerState.batteryCharge = 4;  // Set battery charge to full.
   controllerState.joysticks[JOYSTICK_LEFT].dx = 0x0;
   controllerState.joysticks[JOYSTICK_LEFT].dy = -0x0;
