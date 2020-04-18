@@ -257,7 +257,6 @@ int argmain(int argc, char **argv) {
   }
 
   if (!strcmp(argv[0], "getSystemLanguage")) {
-    // thanks zaksa
     setInitialize();
     u64 languageCode = 0;
     SetLanguage language = SetLanguage_ENUS;
