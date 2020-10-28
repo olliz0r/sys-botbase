@@ -1,10 +1,10 @@
 #include <switch.h>
 
 extern Handle debughandle;
-bool bControllerIsInitialised;
-u64 controllerHandle;
-HiddbgHdlsDeviceInfo controllerDevice;
-HiddbgHdlsState controllerState;
+extern bool bControllerIsInitialised;
+extern u64 controllerHandle;
+extern HiddbgHdlsDeviceInfo controllerDevice;
+extern HiddbgHdlsState controllerState;
 extern u64 buttonClickSleepTime;
 
 typedef struct {
