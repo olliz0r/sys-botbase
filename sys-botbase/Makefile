@@ -1,5 +1,4 @@
 .SUFFIXES:
-include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/../Atmosphere-libs/config/templates/stratosphere.mk
 
 ifeq ($(strip $(DEVKITPRO)),)
 $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
