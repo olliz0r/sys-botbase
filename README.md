@@ -16,19 +16,23 @@ Don't even think of blaming me if anything goes wrong with you using this. It's 
 - [ ] simulate touchscreen drawing
 
 ### Memory reading:
-- [ ] read x bytes of consecutive memory from RAM based on absolute memory address
+- [x] read x bytes of consecutive memory from RAM based on absolute memory address
+- [x] read x bytes of consecutive memory from RAM based on address relative to main nso base
 - [x] read x bytes of consecutive memory from RAM based on address relative to heap base
 
 ### Memory writing:
-- [ ] write x bytes of consecutive memory to RAM based on absolute memory address
+- [x] write x bytes of consecutive memory to RAM based on absolute memory address
+- [x] write x bytes of consecutive memory to RAM based on address relative to main nso base
 - [x] write x bytes of consecutive memory to RAM based on address relative to heap base
 
 ### screen capture:
-- [ ] capture current screen and send it 
+- [x] capture current screen and send it (only as shitty jpeg at this time)
 
-# Installation
-I've only tried this on Atmosphere (0.10.2), so if you are using a different cfw your experience might vary.
+# Easy Installation
+Download the .zip file and extract it to your sd card. The zip file contains the necessary folder structure and flag files.
+Restart your switch. 
 
+# Manual Installation
 Copy the sys-botbase.nsp file to sdmc://atmosphere/contents/430000000000000B and rename it to exefs.nsp.
 Create a new folder in sdmc://atmosphere/contents/430000000000000B names "flags".
 Create a empty file called boot2.flag inside this folder.
@@ -38,3 +42,5 @@ The sysmodule opens a socket connection on port 6000. See the python example on 
 
 
 # big thank you to jakibaki for a great sysmodule base to learn and work with, as well as being helpful on the Reswitched discord!
+# also thanks to RTNX on discord for bringing to my attention a nasty little bug that would very randomly cause RAM poking to go bad and the switch (sometimes) crashing as a result.
+# thanks to Anubis for stress testing! 
