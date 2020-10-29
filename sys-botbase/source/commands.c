@@ -157,9 +157,9 @@ void poke(u64 offset, u64 size, u8* val)
 
 void peek(u64 offset, u64 size)
 {
-    u8 out[size];
+    u8 *out = malloc(sizeof(u8) * size);
     attach();
-    Result rc = svcReadDebugProcessMemory(&out, debughandle, offset, size);
+    Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
     if (R_FAILED(rc) && debugResultCodes)
         printf("svcReadDebugProcessMemory: %d\n", rc);
     detach();
@@ -170,6 +170,7 @@ void peek(u64 offset, u64 size)
         printf("%02X", out[i]);
     }
     printf("\n");
+    free(out);
 }
 
 void click(HidControllerKeys btn)
