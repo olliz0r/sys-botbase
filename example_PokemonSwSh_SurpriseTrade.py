@@ -42,7 +42,7 @@ pokemonToInject = str(binascii.hexlify(pokemonToInject), "utf-8")
 
 time.sleep(2)
 while True:
-    sendCommand(s, f"poke 0x4293D8B0 0x{pokemonToInject}") #read pokemon from file and inject it into box1slot1 for trade
+    sendCommand(s, f"poke 0x45075880 0x{pokemonToInject}") #read pokemon from file and inject it into box1slot1 for trade
 
 
     sendCommand(s, "click Y")
@@ -68,7 +68,7 @@ while True:
     time.sleep(0.7)
     time.sleep(30) #probably needs to be longer for trade evolutions
 
-    sendCommand(s, "peek 0x4293D8B0 344") #get pokemon from box1slot1
+    sendCommand(s, "peek 0x45075880 344") #get pokemon from box1slot1
     time.sleep(0.5) #give time to answer
     pokemonBytes = s.recv(689)
     pokemonBytes = pokemonBytes[0:-1] #cut off \n at the end
