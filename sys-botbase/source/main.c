@@ -321,6 +321,10 @@ int argmain(int argc, char **argv)
         free(buf);
     }
 
+    if(!strcmp(argv[0], "getVersion")){
+        printf("1.6\n");
+    }
+
     return 0;
 }
 
