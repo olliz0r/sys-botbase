@@ -286,7 +286,7 @@ int argmain(int argc, char **argv)
  
     if(!strcmp(argv[0], "getMainNsoBase")){
         MetaData meta = getMetaData();
-        printf("%16lX\n", meta.main_nso_base);
+        printf("%016lX\n", meta.main_nso_base);
     }
     
     if(!strcmp(argv[0], "getBuildID")){
@@ -297,7 +297,7 @@ int argmain(int argc, char **argv)
 
     if(!strcmp(argv[0], "getHeapBase")){
         MetaData meta = getMetaData();
-        printf("%16lX\n", meta.heap_base);
+        printf("%016lX\n", meta.heap_base);
     }
 
     if(!strcmp(argv[0], "pixelPeek")){
