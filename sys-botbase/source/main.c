@@ -271,7 +271,7 @@ int argmain(int argc, char **argv)
 
     if(!strcmp(argv[0], "getTitleID")){
         MetaData meta = getMetaData();
-        printf("%16lX\n", meta.titleID);
+        printf("%016lX\n", meta.titleID);
     }
 
     if(!strcmp(argv[0], "getSystemLanguage")){
