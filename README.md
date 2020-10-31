@@ -41,6 +41,7 @@ Restart your switch.
 The sysmodule opens a socket connection on port 6000. See the python example on how to talk to the sysmodule and what commands are available.
 
 
-# big thank you to jakibaki for a great sysmodule base to learn and work with, as well as being helpful on the Reswitched discord!
-# also thanks to RTNX on discord for bringing to my attention a nasty little bug that would very randomly cause RAM poking to go bad and the switch (sometimes) crashing as a result.
-# thanks to Anubis for stress testing! 
+# Credits
+big thank you to jakibaki for a great sysmodule base to learn and work with, as well as being helpful on the Reswitched discord!
+also thanks to RTNX on discord for bringing to my attention a nasty little bug that would very randomly cause RAM poking to go bad and the switch (sometimes) crashing as a result.
+thanks to Anubis for stress testing!
