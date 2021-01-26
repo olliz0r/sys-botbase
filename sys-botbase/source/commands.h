@@ -2,7 +2,7 @@
 
 extern Handle debughandle;
 extern bool bControllerIsInitialised;
-extern u64 controllerHandle;
+extern HiddbgHdlsHandle cHandle;
 extern HiddbgHdlsDeviceInfo controllerDevice;
 extern HiddbgHdlsState controllerState;
 extern u64 buttonClickSleepTime;

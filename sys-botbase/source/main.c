@@ -232,7 +232,7 @@ int argmain(int argc, char **argv)
     //detachController
     if(!strcmp(argv[0], "detachController"))
     {
-        Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
+        Result rc = hiddbgDetachHdlsVirtualDevice(cHandle);
         if (R_FAILED(rc) && debugResultCodes)
             printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
         rc = hiddbgReleaseHdlsWorkBuffer();
