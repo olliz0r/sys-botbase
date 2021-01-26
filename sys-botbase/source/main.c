@@ -324,6 +324,30 @@ int argmain(int argc, char **argv)
     if(!strcmp(argv[0], "getVersion")){
         printf("1.6\n");
     }
+	
+	// add to freeze map
+	if (!strcmp(argv[0], "freeze"))
+    {
+        if(argc != 3)
+            return 0;
+		MetaData meta = getMetaData();
+
+        u64 offset = parseStringToInt(argv[1]);
+        u64 size = 0;
+        u8* data = parseStringToByteBuffer(argv[2], &size);
+        addToFreezeMap(meta.heap_base + offset, data, size);
+    }
+	
+	// remove from freeze map
+	if (!strcmp(argv[0], "unFreeze"))
+    {
+        if(argc != 2)
+            return 0;
+		MetaData meta = getMetaData();
+
+        u64 offset = parseStringToInt(argv[1]);
+        removeFromFreezeMap(meta.heap_base + offset);
+    }
 
     return 0;
 }
@@ -421,6 +445,15 @@ int main()
                 }
             }
         }
+		
+		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
+		{
+			if (freezeAddrMap[j] != 0)
+			{
+				poke(freezeAddrMap[j], freezeMapSizes[j], freezeValueMap[j]);
+			}
+		}
+		
         svcSleepThread(mainLoopSleepTime * 1e+6L);
     }
 

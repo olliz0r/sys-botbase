@@ -8,6 +8,52 @@
 #include <switch.h>
 #include "util.h"
 
+u64 freezeAddrMap[FREEZE_DIC_LENGTH] = {0};
+u8* freezeValueMap[FREEZE_DIC_LENGTH];
+u64 freezeMapSizes[FREEZE_DIC_LENGTH];
+
+int findAddrSlot(u64 addr)
+{
+	for (int i = 0; i < FREEZE_DIC_LENGTH; i++)
+	{
+		if (freezeAddrMap[i] == addr)
+			return i;
+	}
+	
+	return -1;
+}
+
+int findNextEmptySlot()
+{
+	return findAddrSlot(0);
+}
+
+int addToFreezeMap(u64 addr, u8* v_data, u64 v_size)
+{
+	// update slot if already exists
+	int slot = findAddrSlot(addr);
+	if (slot == -1)
+		slot = findNextEmptySlot();
+	if (slot == -1)
+		return 0;
+	
+	freezeAddrMap[slot] = addr;
+	freezeValueMap[slot] = v_data;
+	freezeMapSizes[slot] = v_size;
+	
+	return slot;
+}
+
+int removeFromFreezeMap(u64 addr)
+{
+	int slot = findAddrSlot(addr);
+	if (slot == -1)
+		return 0;
+	freezeAddrMap[slot] = 0;
+	free(freezeValueMap[slot]);
+	return slot;
+}
+
 int setupServerSocket()
 {
     int lissock;
