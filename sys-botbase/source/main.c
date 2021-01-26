@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <switch.h>
+#include <pthread.h>
 #include "commands.h"
 #include "args.h"
 #include "util.h"
@@ -15,6 +16,12 @@
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
+
+// freezeMem thread
+void *sub_freeze(void *);
+
+// lock for freeze thread
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
@@ -388,11 +395,17 @@ int main()
     pfds[0].fd = listenfd;
     pfds[0].events = POLLIN;
     fd_count = 1;
+	
+	pthread_t id;
 
     int newfd;
+	
+	pthread_create(&id, NULL, sub_freeze, 0);
+	
     while (appletMainLoop())
     {
         poll(pfds, fd_count, -1);
+		pthread_mutex_lock(&mutex);
         for(int i = 0; i < fd_count; i++) 
         {
             if (pfds[i].revents & POLLIN) 
@@ -445,7 +458,18 @@ int main()
                 }
             }
         }
-		
+		pthread_mutex_unlock(&mutex);
+        svcSleepThread(mainLoopSleepTime * 1e+6L);
+    }
+
+    return 0;
+}
+
+void *sub_freeze(void *arg)
+{
+	while (true)
+	{
+		pthread_mutex_lock(&mutex);
 		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
 		{
 			if (freezeAddrMap[j] != 0)
@@ -453,9 +477,7 @@ int main()
 				poke(freezeAddrMap[j], freezeMapSizes[j], freezeValueMap[j]);
 			}
 		}
-		
-        svcSleepThread(mainLoopSleepTime * 1e+6L);
-    }
-
-    return 0;
+		pthread_mutex_unlock(&mutex);
+		svcSleepThread(1e+6L);
+	}
 }

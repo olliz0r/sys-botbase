@@ -1,6 +1,6 @@
 #include <switch.h>
 #define MAX_LINE_LENGTH 344 * 32 * 2
-#define FREEZE_DIC_LENGTH 100
+#define FREEZE_DIC_LENGTH 32
 
 extern u64 mainLoopSleepTime;
 extern bool debugResultCodes;

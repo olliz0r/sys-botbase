@@ -8,6 +8,7 @@
 #include <switch.h>
 #include "util.h"
 
+// should be a struct or something idc rn
 u64 freezeAddrMap[FREEZE_DIC_LENGTH] = {0};
 u8* freezeValueMap[FREEZE_DIC_LENGTH];
 u64 freezeMapSizes[FREEZE_DIC_LENGTH];
