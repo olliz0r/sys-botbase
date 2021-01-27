@@ -64,6 +64,7 @@ int getFreezeCount()
 			++count;
 	}
 	printf("%02X", count);
+	printf("\n");
 	return count;
 }
 
