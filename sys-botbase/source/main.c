@@ -90,6 +90,7 @@ void __appInit(void)
 
 void __appExit(void)
 {
+	pthread_cancel(id);
 	clearFreezes();
     fsdevUnmountAll();
     fsExit();
@@ -339,12 +340,11 @@ int argmain(int argc, char **argv)
     {
         if(argc != 3)
             return 0;
-		MetaData meta = getMetaData();
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        addToFreezeMap(meta.heap_base + offset, data, size);
+        addToFreezeMap(offset, data, size);
     }
 	
 	// remove from freeze map
@@ -352,10 +352,9 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-		MetaData meta = getMetaData();
 
         u64 offset = parseStringToInt(argv[1]);
-        removeFromFreezeMap(meta.heap_base + offset);
+        removeFromFreezeMap(offset);
     }
 	
 	// get count of offsets being frozen
@@ -479,14 +478,16 @@ int main()
 
 void *sub_freeze(void *arg)
 {
+	MetaData meta;
 	while (true)
 	{
 		pthread_mutex_lock(&mutex);
+		meta = getMetaData();
 		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
 		{
 			if (freezeAddrMap[j] != 0)
 			{
-				poke(freezeAddrMap[j], freezeMapSizes[j], freezeValueMap[j]);
+				poke(meta.heap_base + freezeAddrMap[j], freezeMapSizes[j], freezeValueMap[j]);
 			}
 		}
 		pthread_mutex_unlock(&mutex);
