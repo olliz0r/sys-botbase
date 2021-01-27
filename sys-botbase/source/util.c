@@ -55,6 +55,34 @@ int removeFromFreezeMap(u64 addr)
 	return slot;
 }
 
+int getFreezeCount()
+{
+	int count = 0;
+	for (int i = 0; i < FREEZE_DIC_LENGTH; i++)
+	{
+		if (freezeAddrMap[i] != 0)
+			++count;
+	}
+	printf("%02X", count);
+	return count;
+}
+
+// returns false if there was nothing to clear
+bool clearFreezes()
+{
+	bool clearedOne = false;
+	for (int i = 0; i < FREEZE_DIC_LENGTH; i++)
+	{
+		if (freezeAddrMap[i] != 0)
+		{
+			freezeAddrMap[i] = 0;
+			free(freezeValueMap[i]);
+			clearedOne = true;
+		}
+	}
+	return clearedOne;
+}
+
 int setupServerSocket()
 {
     int lissock;

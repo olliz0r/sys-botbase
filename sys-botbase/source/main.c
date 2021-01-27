@@ -19,6 +19,7 @@
 
 // freezeMem thread
 void *sub_freeze(void *);
+pthread_t id;
 
 // lock for freeze thread
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -89,6 +90,7 @@ void __appInit(void)
 
 void __appExit(void)
 {
+	clearFreezes();
     fsdevUnmountAll();
     fsExit();
     smExit();
@@ -329,7 +331,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.6\n");
+        printf("1.7\n");
     }
 	
 	// add to freeze map
@@ -355,6 +357,18 @@ int argmain(int argc, char **argv)
         u64 offset = parseStringToInt(argv[1]);
         removeFromFreezeMap(meta.heap_base + offset);
     }
+	
+	// get count of offsets being frozen
+	if (!strcmp(argv[0], "freezeCount"))
+	{
+		getFreezeCount();
+	}
+	
+	// clear all freezes
+	if (!strcmp(argv[0], "freezeClear"))
+	{
+		clearFreezes();
+	}
 
     return 0;
 }
@@ -395,8 +409,6 @@ int main()
     pfds[0].fd = listenfd;
     pfds[0].events = POLLIN;
     fd_count = 1;
-	
-	pthread_t id;
 
     int newfd;
 	
