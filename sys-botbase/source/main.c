@@ -481,16 +481,16 @@ void *sub_freeze(void *arg)
 	MetaData meta;
 	while (true)
 	{
-		pthread_mutex_lock(&mutex);
 		meta = getMetaData();
 		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
 		{
 			if (freezeAddrMap[j] != 0)
 			{
+				pthread_mutex_lock(&mutex);
 				poke(meta.heap_base + freezeAddrMap[j], freezeMapSizes[j], freezeValueMap[j]);
+				pthread_mutex_unlock(&mutex);
 			}
 		}
-		pthread_mutex_unlock(&mutex);
 		svcSleepThread(1e+6L);
 	}
 }
