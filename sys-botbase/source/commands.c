@@ -6,8 +6,6 @@
 #include "commands.h"
 #include "util.h"
 
-Mutex actionLock;
-
 //Controller:
 bool bControllerIsInitialised = false;
 HiddbgHdlsHandle cHandle = {0};
