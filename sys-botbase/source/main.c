@@ -18,10 +18,6 @@
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
 
-// freezeMem thread
-pthread_t id;
-int thr_state = 0; // for releasing the thread
-
 // lock for freeze thread
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -433,6 +429,8 @@ int main()
     fd_count = 1;
 
     int newfd;
+	pthread_t id;
+	int thr_state = 0; // for releasing the thread
 	
 	initFreezes();
 	pthread_create(&id, NULL, sub_freeze, (void*)&thr_state);
@@ -503,6 +501,5 @@ int main()
 	clearFreezes();
 	freeFreezes();
 	
-	pthread_exit(0);
     return 0;
 }
