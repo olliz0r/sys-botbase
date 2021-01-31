@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <math.h>
 #include <switch.h>
-#include <pthread.h>
 #include "commands.h"
 #include "args.h"
 #include "util.h"
@@ -17,28 +16,24 @@
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
+#define THREAD_SIZE 0xFF000
 
 // lock for freeze thread
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+Mutex eventMutex;
 
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
 
-// setup a heap 
-char inner_heap[HEAP_SIZE];
-
 // we override libnx internals to do a minimal init
 void __libnx_initheap(void)
 {
-	void*  addr = inner_heap;
-	size_t size = HEAP_SIZE;
-	
-    extern char *fake_heap_start;
-    extern char *fake_heap_end;
+	static u8 inner_heap[HEAP_SIZE];
+    extern void* fake_heap_start;
+    extern void* fake_heap_end;
 
-    // setup newlib fake heap
-    fake_heap_start = (char *) addr;
-	fake_heap_end   = (char *) addr + size;
+    // Configure the newlib heap.
+    fake_heap_start = inner_heap;
+    fake_heap_end   = inner_heap + sizeof(inner_heap);
 }
 
 void __appInit(void)
@@ -338,11 +333,11 @@ int argmain(int argc, char **argv)
     {
         if(argc != 3)
             return 0;
-
+		MetaData meta = getMetaData();
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        addToFreezeMap(offset, data, size);
+        addToFreezeMap(meta.heap_base + offset, data, size);
     }
 	
 	// remove from freeze map
@@ -350,9 +345,9 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-
+		MetaData meta = getMetaData();
         u64 offset = parseStringToInt(argv[1]);
-        removeFromFreezeMap(offset);
+        removeFromFreezeMap(meta.heap_base + offset);
     }
 	
 	// get count of offsets being frozen
@@ -391,25 +386,26 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
     (*fd_count)--;
 }
 
-void *sub_freeze(void *arg)
+void sub_freeze(void *arg)
 {
-	MetaData meta;
-	while (*(int*)arg == 0)
+	u64 state;
+	while (1)
 	{
-		meta = getMetaData();
 		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
 		{
 			if (freezes[j].address != 0)
 			{
-				pthread_mutex_lock(&mutex);
-				poke(meta.heap_base + freezes[j].address, freezes[j].size, freezes[j].vData);
-				pthread_mutex_unlock(&mutex);
+				mutexLock(&eventMutex);
+				poke(freezes[j].address, freezes[j].size, freezes[j].vData);
+				mutexUnlock(&eventMutex);
 			}
 		}
 		svcSleepThread(1e+6L);
+		
+		state = (u64) arg;
+		if (state != 0)
+			break;
 	}
-	pthread_exit(NULL);
-	return 0;
 }
 
 int main()
@@ -429,16 +425,25 @@ int main()
     fd_count = 1;
 
     int newfd;
-	pthread_t id;
-	int thr_state = 0; // for releasing the thread
+	
+	Thread thread;
+	Result rc;
+	u64 thr_state = 0; // for releasing the thread
 	
 	initFreezes();
-	pthread_create(&id, NULL, sub_freeze, (void*)&thr_state);
+	// poke thread
+	mutexInit(&eventMutex);
+	rc = threadCreate(&thread, sub_freeze, (void*)thr_state, NULL, THREAD_SIZE, 0x3B, -2); 
+	
+	if (R_SUCCEEDED(rc))
+    {
+        rc = threadStart(&thread);
+	}
 	
     while (appletMainLoop())
     {
         poll(pfds, fd_count, -1);
-		pthread_mutex_lock(&mutex);
+		mutexLock(&eventMutex);
         for(int i = 0; i < fd_count; i++) 
         {
             if (pfds[i].revents & POLLIN) 
@@ -491,12 +496,17 @@ int main()
                 }
             }
         }
-		pthread_mutex_unlock(&mutex);
+		mutexUnlock(&eventMutex);
         svcSleepThread(mainLoopSleepTime * 1e+6L);
     }
 
 	thr_state = 1;
-	pthread_join(id, NULL);
+	
+	if (R_SUCCEEDED(rc))
+    {
+		threadWaitForExit(&thread);
+        threadClose(&thread);
+	}
 	
 	clearFreezes();
 	freeFreezes();
