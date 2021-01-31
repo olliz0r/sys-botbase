@@ -12,14 +12,15 @@
 #include "commands.h"
 #include "args.h"
 #include "util.h"
+#include "freeze.h"
 #include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
 
 // freezeMem thread
-void *sub_freeze(void *);
 pthread_t id;
+int thr_state = 0; // for releasing the thread
 
 // lock for freeze thread
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -27,18 +28,21 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
 
-// setup a fake heap (we don't need the heap anyway)
-char fake_heap[HEAP_SIZE];
+// setup a heap 
+char inner_heap[HEAP_SIZE];
 
 // we override libnx internals to do a minimal init
 void __libnx_initheap(void)
 {
+	void*  addr = inner_heap;
+	size_t size = HEAP_SIZE;
+	
     extern char *fake_heap_start;
     extern char *fake_heap_end;
 
     // setup newlib fake heap
-    fake_heap_start = fake_heap;
-    fake_heap_end = fake_heap + HEAP_SIZE;
+    fake_heap_start = (char *) addr;
+	fake_heap_end   = (char *) addr + size;
 }
 
 void __appInit(void)
@@ -90,8 +94,6 @@ void __appInit(void)
 
 void __appExit(void)
 {
-	pthread_cancel(id);
-	clearFreezes();
     fsdevUnmountAll();
     fsExit();
     smExit();
@@ -332,7 +334,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.7\n");
+        printf("1.6b\n");
     }
 	
 	// add to freeze map
@@ -393,6 +395,27 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
     (*fd_count)--;
 }
 
+void *sub_freeze(void *arg)
+{
+	MetaData meta;
+	while (*(int*)arg == 0)
+	{
+		meta = getMetaData();
+		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
+		{
+			if (freezes[j].address != 0)
+			{
+				pthread_mutex_lock(&mutex);
+				poke(meta.heap_base + freezes[j].address, freezes[j].size, freezes[j].vData);
+				pthread_mutex_unlock(&mutex);
+			}
+		}
+		svcSleepThread(1e+6L);
+	}
+	pthread_exit(NULL);
+	return 0;
+}
+
 int main()
 {
     char *linebuf = malloc(sizeof(char) * MAX_LINE_LENGTH);
@@ -411,7 +434,8 @@ int main()
 
     int newfd;
 	
-	pthread_create(&id, NULL, sub_freeze, 0);
+	initFreezes();
+	pthread_create(&id, NULL, sub_freeze, (void*)&thr_state);
 	
     while (appletMainLoop())
     {
@@ -473,24 +497,12 @@ int main()
         svcSleepThread(mainLoopSleepTime * 1e+6L);
     }
 
+	thr_state = 1;
+	pthread_join(id, NULL);
+	
+	clearFreezes();
+	freeFreezes();
+	
+	pthread_exit(0);
     return 0;
-}
-
-void *sub_freeze(void *arg)
-{
-	MetaData meta;
-	while (true)
-	{
-		meta = getMetaData();
-		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
-		{
-			if (freezeAddrMap[j] != 0)
-			{
-				pthread_mutex_lock(&mutex);
-				poke(meta.heap_base + freezeAddrMap[j], freezeMapSizes[j], freezeValueMap[j]);
-				pthread_mutex_unlock(&mutex);
-			}
-		}
-		svcSleepThread(1e+6L);
-	}
 }
