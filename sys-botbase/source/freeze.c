@@ -53,6 +53,7 @@ int addToFreezeMap(u64 addr, u8* v_data, u64 v_size)
 	freezes[slot].address = addr;
 	freezes[slot].vData = v_data;
 	freezes[slot].size = v_size;
+	freezes[slot].state = 1;
 	
 	return slot;
 }
@@ -63,6 +64,7 @@ int removeFromFreezeMap(u64 addr)
 	if (slot == -1)
 		return 0;
 	freezes[slot].address = 0;
+	freezes[slot].state = 0;
 	free(freezes[slot].vData);
 	return slot;
 }
@@ -72,7 +74,7 @@ int getFreezeCount()
 	int count = 0;
 	for (int i = 0; i < FREEZE_DIC_LENGTH; i++)
 	{
-		if (freezes[i].address != 0)
+		if (freezes[i].state != 0)
 			++count;
 	}
 	printf("%02X", count);
@@ -81,17 +83,19 @@ int getFreezeCount()
 }
 
 // returns false if there was nothing to clear
-bool clearFreezes()
+char clearFreezes()
 {
-	bool clearedOne = false;
-	for (int i = 0; i < FREEZE_DIC_LENGTH; i++)
+	char clearedOne = 0;
+	int i;
+	for (i = 0; i < FREEZE_DIC_LENGTH; i++)
 	{
-		if (freezes[i].address != 0)
+		FreezeBlock* curFreeze = &freezes[i];
+		if (curFreeze->state != 0)
 		{
-			freezes[i].address = 0;
-			free(freezes[i].vData);
-			clearedOne = true;
+			removeFromFreezeMap(curFreeze->address);
+			clearedOne = 1;
 		}
+		curFreeze->state = 0;
 	}
 	return clearedOne;
 }

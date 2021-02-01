@@ -16,7 +16,7 @@
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000540000
-#define THREAD_SIZE 0xFF000
+#define THREAD_SIZE 0x200000
 
 // lock for freeze thread
 Mutex eventMutex;
@@ -325,7 +325,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.6b\n");
+        printf("1.6beri\n");
     }
 	
 	// add to freeze map
@@ -393,7 +393,7 @@ void sub_freeze(void *arg)
 	{
 		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
 		{
-			if (freezes[j].address != 0)
+			if (freezes[j].state == 1)
 			{
 				mutexLock(&eventMutex);
 				poke(freezes[j].address, freezes[j].size, freezes[j].vData);
@@ -402,7 +402,7 @@ void sub_freeze(void *arg)
 		}
 		svcSleepThread(1e+6L);
 		
-		state = (u64) arg;
+		state = *(u64*) arg;
 		if (state != 0)
 			break;
 	}
@@ -433,7 +433,7 @@ int main()
 	initFreezes();
 	// poke thread
 	mutexInit(&eventMutex);
-	rc = threadCreate(&thread, sub_freeze, (void*)thr_state, NULL, THREAD_SIZE, 0x3B, -2); 
+	rc = threadCreate(&thread, sub_freeze, (void*)&thr_state, NULL, THREAD_SIZE, 0x2C, -2); 
 	
 	if (R_SUCCEEDED(rc))
     {
