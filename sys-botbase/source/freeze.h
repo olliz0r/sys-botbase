@@ -10,11 +10,11 @@ typedef struct {
 
 extern FreezeBlock* freezes;
 
-int initFreezes(void);
-int freeFreezes(void);
+void initFreezes(void);
+void freeFreezes(void);
 int findAddrSlot(u64 addr);
 int findNextEmptySlot();
 int addToFreezeMap(u64 addr, u8* v_data, u64 v_size);
 int removeFromFreezeMap(u64 addr);
 int getFreezeCount();
-char clearFreezes();
+char clearFreezes(void);

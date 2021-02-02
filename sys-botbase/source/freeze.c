@@ -10,16 +10,14 @@
 
 FreezeBlock* freezes;
 
-int initFreezes(void)
+void initFreezes(void)
 {
 	freezes = calloc(FREEZE_DIC_LENGTH, sizeof(FreezeBlock));
-	return 0;
 }
 
-int freeFreezes(void)
+void freeFreezes(void)
 {
 	free(freezes);
-	return 0;
 }
 
 int findAddrSlot(u64 addr)
@@ -82,20 +80,17 @@ int getFreezeCount()
 	return count;
 }
 
-// returns false if there was nothing to clear
-char clearFreezes()
+// returns 0 if there was nothing to clear
+char clearFreezes(void)
 {
 	char clearedOne = 0;
-	int i;
-	for (i = 0; i < FREEZE_DIC_LENGTH; i++)
+	for (int i = 0; i < FREEZE_DIC_LENGTH; i++)
 	{
-		FreezeBlock* curFreeze = &freezes[i];
-		if (curFreeze->state != 0)
+		if (freezes[i].state != 0)
 		{
-			removeFromFreezeMap(curFreeze->address);
+			removeFromFreezeMap(freezes[i].address);
 			clearedOne = 1;
 		}
-		curFreeze->state = 0;
 	}
 	return clearedOne;
 }
