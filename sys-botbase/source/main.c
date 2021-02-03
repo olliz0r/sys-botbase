@@ -333,11 +333,10 @@ int argmain(int argc, char **argv)
     {
         if(argc != 3)
             return 0;
-		MetaData meta = getMetaData();
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        addToFreezeMap(meta.heap_base + offset, data, size);
+        addToFreezeMap(offset, data, size);
     }
 	
 	// remove from freeze map
@@ -345,9 +344,8 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-		MetaData meta = getMetaData();
         u64 offset = parseStringToInt(argv[1]);
-        removeFromFreezeMap(meta.heap_base + offset);
+        removeFromFreezeMap(offset);
     }
 	
 	// get count of offsets being frozen
@@ -388,22 +386,24 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
 
 void sub_freeze(void *arg)
 {
-	u64 state;
+	u64 heap_base;
 	while (1)
 	{
+		heap_base = getHeapBaseStatic();
+		mutexLock(&eventMutex);
+		attach();
 		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
 		{
 			if (freezes[j].state == 1)
 			{
-				mutexLock(&eventMutex);
-				poke(freezes[j].address, freezes[j].size, freezes[j].vData);
-				mutexUnlock(&eventMutex);
+				writeMem(heap_base + freezes[j].address, freezes[j].size, freezes[j].vData);
 			}
 		}
+		detach();
+		mutexUnlock(&eventMutex);
 		svcSleepThread(1e+6L);
 		
-		state = *(u64*) arg;
-		if (state != 0)
+		if (*(u64*)arg != 0)
 			break;
 	}
 }

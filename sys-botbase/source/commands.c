@@ -70,6 +70,11 @@ u64 getHeapBase(Handle handle){
     return heap_base;
 }
 
+u64 getHeapBaseStatic()
+{
+	return getHeapBase(debughandle);
+}
+
 u64 getTitleId(u64 pid){
     u64 titleId = 0;
     Result rc = pminfoGetProgramId(&titleId, pid);
@@ -143,14 +148,18 @@ void initController()
 }
 
 
-
 void poke(u64 offset, u64 size, u8* val)
 {
     attach();
-    Result rc = svcWriteDebugProcessMemory(debughandle, val, offset, size);
+    writeMem(offset, size, val);
+    detach();
+}
+
+void writeMem(u64 offset, u64 size, u8* val)
+{
+	Result rc = svcWriteDebugProcessMemory(debughandle, val, offset, size);
     if (R_FAILED(rc) && debugResultCodes)
         printf("svcWriteDebugProcessMemory: %d\n", rc);
-    detach();
 }
 
 void peek(u64 offset, u64 size)

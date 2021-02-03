@@ -18,11 +18,13 @@ void attach();
 void detach();
 u64 getMainNsoBase(u64 pid);
 u64 getHeapBase(Handle handle);
+u64 getHeapBaseStatic();
 u64 getTitleId(u64 pid);
 void getBuildID(MetaData* meta, u64 pid);
 MetaData getMetaData(void);
 
 void poke(u64 offset, u64 size, u8* val);
+void writeMem(u64 offset, u64 size, u8* val);
 void peek(u64 offset, u64 size);
 void click(HidControllerKeys btn);
 void press(HidControllerKeys btn);
