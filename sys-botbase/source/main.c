@@ -15,7 +15,7 @@
 #include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
-#define HEAP_SIZE 0x000540000
+#define HEAP_SIZE 0x000800000
 #define THREAD_SIZE 0x200000
 
 // lock for freeze thread
@@ -325,7 +325,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.6beri\n");
+        printf("1.61beri\n");
     }
 	
 	// add to freeze map
@@ -333,10 +333,12 @@ int argmain(int argc, char **argv)
     {
         if(argc != 3)
             return 0;
+		
+        MetaData meta = getMetaData();
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        addToFreezeMap(offset, data, size);
+        addToFreezeMap(meta.heap_base + offset, data, size);
     }
 	
 	// remove from freeze map
@@ -344,8 +346,10 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
+		
+		MetaData meta = getMetaData();
         u64 offset = parseStringToInt(argv[1]);
-        removeFromFreezeMap(offset);
+        removeFromFreezeMap(meta.heap_base + offset);
     }
 	
 	// get count of offsets being frozen
@@ -386,22 +390,20 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
 
 void sub_freeze(void *arg)
 {
-	u64 heap_base;
 	while (1)
 	{
-		heap_base = getHeapBaseStatic();
 		mutexLock(&eventMutex);
 		attach();
 		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
 		{
 			if (freezes[j].state == 1)
 			{
-				writeMem(heap_base + freezes[j].address, freezes[j].size, freezes[j].vData);
+				writeMem(freezes[j].address, freezes[j].size, freezes[j].vData);
 			}
 		}
 		detach();
 		mutexUnlock(&eventMutex);
-		svcSleepThread(1e+6L);
+		svcSleepThread(3e+6L);
 		
 		if (*(u64*)arg != 0)
 			break;

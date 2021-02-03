@@ -70,11 +70,6 @@ u64 getHeapBase(Handle handle){
     return heap_base;
 }
 
-u64 getHeapBaseStatic()
-{
-	return getHeapBase(debughandle);
-}
-
 u64 getTitleId(u64 pid){
     u64 titleId = 0;
     Result rc = pminfoGetProgramId(&titleId, pid);

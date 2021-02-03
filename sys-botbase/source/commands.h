@@ -18,7 +18,6 @@ void attach();
 void detach();
 u64 getMainNsoBase(u64 pid);
 u64 getHeapBase(Handle handle);
-u64 getHeapBaseStatic();
 u64 getTitleId(u64 pid);
 void getBuildID(MetaData* meta, u64 pid);
 MetaData getMetaData(void);
