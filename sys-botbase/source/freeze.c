@@ -36,7 +36,7 @@ int findNextEmptySlot()
 	return findAddrSlot(0);
 }
 
-int addToFreezeMap(u64 addr, u8* v_data, u64 v_size)
+int addToFreezeMap(u64 addr, u8* v_data, u64 v_size, u64 tid)
 {
 	// update slot if already exists
 	int slot = findAddrSlot(addr);
@@ -52,6 +52,7 @@ int addToFreezeMap(u64 addr, u8* v_data, u64 v_size)
 	freezes[slot].vData = v_data;
 	freezes[slot].size = v_size;
 	freezes[slot].state = 1;
+	freezes[slot].titleId = tid;
 	
 	return slot;
 }
@@ -81,9 +82,9 @@ int getFreezeCount()
 }
 
 // returns 0 if there was nothing to clear
-char clearFreezes(void)
+u8 clearFreezes(void)
 {
-	char clearedOne = 0;
+	u8 clearedOne = 0;
 	for (int i = 0; i < FREEZE_DIC_LENGTH; i++)
 	{
 		if (freezes[i].state != 0)

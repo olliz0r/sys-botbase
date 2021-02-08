@@ -81,6 +81,8 @@ void __appInit(void)
     rc = capsscInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
+	
+    printf(CONSOLE_ESC(10;10H) "Hello World\n");
 }
 
 void __appExit(void)
@@ -325,8 +327,25 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.61beri\n");
+        printf("1.62beri\n");
     }
+	
+	// follow pointers and print absolute offset (little endian)
+	// pointer <first (main) jump> <additional jumps> !!do not add the last jump in pointerexpr here, add it yourself!!
+	if (!strcmp(argv[0], "pointer"))
+	{
+		if(argc < 2)
+            return 0;
+		u64 jumps[argc-1];
+		for (int i = 1; i < argc; ++i)
+			jumps[i-1] = parseStringToInt(argv[i]);
+		u64 solved = followMainPointer(jumps, argc-1);
+		//flip endian
+		u8* solvedReverse = (u8*) &solved;
+		reverseArray(solvedReverse, 0, 7);
+		solved = *(u64*) solvedReverse;
+		printf("%016lX\n", solved);
+	}
 	
 	// add to freeze map
 	if (!strcmp(argv[0], "freeze"))
@@ -334,11 +353,12 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
 		
-        MetaData meta = getMetaData();
+		MetaData meta = getMetaData();
+		
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
         u8* data = parseStringToByteBuffer(argv[2], &size);
-        addToFreezeMap(meta.heap_base + offset, data, size);
+        addToFreezeMap(offset, data, size, meta.titleID);
     }
 	
 	// remove from freeze map
@@ -347,9 +367,8 @@ int argmain(int argc, char **argv)
         if(argc != 2)
             return 0;
 		
-		MetaData meta = getMetaData();
         u64 offset = parseStringToInt(argv[1]);
-        removeFromFreezeMap(meta.heap_base + offset);
+        removeFromFreezeMap(offset);
     }
 	
 	// get count of offsets being frozen
@@ -390,20 +409,53 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
 
 void sub_freeze(void *arg)
 {
+	u64 heap_base;
+	u64 tid_now = 0;
+	u64 pid = 0;
+	bool wait_su = false;
 	while (1)
 	{
 		mutexLock(&eventMutex);
 		attach();
-		for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
-		{
-			if (freezes[j].state == 1)
-			{
-				writeMem(freezes[j].address, freezes[j].size, freezes[j].vData);
-			}
-		}
+		heap_base = getHeapBase(debughandle);
+		pmdmntGetApplicationProcessId(&pid);
+		tid_now = getTitleId(pid);
 		detach();
+		
+		// don't freeze on startup of new tid to remove any chance of save corruption
+		if (tid_now == 0)
+		{
+			mutexUnlock(&eventMutex);
+			svcSleepThread(3e+10L);
+			wait_su = true;
+			continue;
+		}
+		
+		if (wait_su)
+		{
+			mutexUnlock(&eventMutex);
+			svcSleepThread(3e+10L);
+			wait_su = false;
+			mutexLock(&eventMutex);
+		}
+		
+		if (heap_base > 0)
+		{
+			attach();
+			for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
+			{
+				if (freezes[j].state == 1 && freezes[j].titleId == tid_now)
+				{
+					writeMem(heap_base + freezes[j].address, freezes[j].size, freezes[j].vData);
+				}
+			}
+			detach();
+		}
+		
 		mutexUnlock(&eventMutex);
 		svcSleepThread(3e+6L);
+		tid_now = 0;
+		pid = 0;
 		
 		if (*(u64*)arg != 0)
 			break;

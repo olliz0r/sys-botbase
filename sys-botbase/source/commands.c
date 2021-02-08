@@ -1,4 +1,5 @@
 #include <switch.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -161,9 +162,7 @@ void peek(u64 offset, u64 size)
 {
     u8 *out = malloc(sizeof(u8) * size);
     attach();
-    Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("svcReadDebugProcessMemory: %d\n", rc);
+    readMem(out, offset, size);
     detach();
 
     u64 i;
@@ -173,6 +172,13 @@ void peek(u64 offset, u64 size)
     }
     printf("\n");
     free(out);
+}
+
+void readMem(u8* out, u64 offset, u64 size)
+{
+	Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("svcReadDebugProcessMemory: %d\n", rc);
 }
 
 void click(HidControllerKeys btn)
@@ -211,3 +217,39 @@ void setStickState(int side, int dxVal, int dyVal)
 	}
     hiddbgSetHdlsState(cHandle, &controllerState);
 }
+
+void reverseArray(u8* arr, int start, int end)
+{
+    int temp;
+    while (start < end)
+    {
+        temp = arr[start];   
+        arr[start] = arr[end];
+        arr[end] = temp;
+        start++;
+        end--;
+    }   
+} 
+
+u64 followMainPointer(u64* jumps, size_t count) 
+{
+	u64 offset;
+    u64 size = sizeof offset;
+	u8 *out = malloc(size);
+	MetaData meta = getMetaData(); // double attach but let's deal with micro-optimizations later
+	
+	attach();
+	readMem(out, meta.main_nso_base + jumps[0], size);
+	offset = *(u64*)out;
+	int i;
+    for (i = 1; i < count; ++i)
+	{
+		readMem(out, jumps[i] + offset, size);
+		offset = *(u64*)out;
+	}
+	detach();
+	free(out);
+	
+    return offset;
+}
+
