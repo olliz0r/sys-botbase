@@ -434,12 +434,13 @@ void sub_freeze(void *arg)
 		if (*(u8*)arg == 1)
 			break;
 		
-		if (*(u8*)arg == 2)
+		if (*(u8*)arg == 2) // no freeze
 		{
 			mutexLock(&eventMutex);
 			thr_state = 0;
 			mutexUnlock(&eventMutex); // stupid but it works so is it really stupid? (yes)
 			freezecount = 0;
+			wait_su = false;
 			goto IDLE;
 		}
 		
