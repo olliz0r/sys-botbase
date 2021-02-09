@@ -17,5 +17,5 @@ int findAddrSlot(u64 addr);
 int findNextEmptySlot();
 int addToFreezeMap(u64 addr, u8* v_data, u64 v_size, u64 tid);
 int removeFromFreezeMap(u64 addr);
-int getFreezeCount();
+int getFreezeCount(bool print);
 u8 clearFreezes(void);

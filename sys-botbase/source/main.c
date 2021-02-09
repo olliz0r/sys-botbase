@@ -21,6 +21,9 @@
 // lock for freeze thread
 Mutex eventMutex;
 
+// for releasing or idling the thread
+u8 thr_state = 0; 
+
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
 
@@ -374,13 +377,14 @@ int argmain(int argc, char **argv)
 	// get count of offsets being frozen
 	if (!strcmp(argv[0], "freezeCount"))
 	{
-		getFreezeCount();
+		getFreezeCount(true);
 	}
 	
 	// clear all freezes
 	if (!strcmp(argv[0], "freezeClear"))
 	{
 		clearFreezes();
+		thr_state = 2;
 	}
 
     return 0;
@@ -413,8 +417,32 @@ void sub_freeze(void *arg)
 	u64 tid_now = 0;
 	u64 pid = 0;
 	bool wait_su = false;
+	int freezecount = 0;
+	
+	IDLE:while (freezecount == 0)
+	{
+		if (*(u8*)arg == 1)
+			break;
+		
+		// do nothing
+		svcSleepThread(1e+9L);
+		freezecount = getFreezeCount(false);
+	}
+	
 	while (1)
 	{
+		if (*(u8*)arg == 1)
+			break;
+		
+		if (*(u8*)arg == 2)
+		{
+			mutexLock(&eventMutex);
+			thr_state = 0;
+			mutexUnlock(&eventMutex); // stupid but it works so is it really stupid? (yes)
+			freezecount = 0;
+			goto IDLE;
+		}
+		
 		mutexLock(&eventMutex);
 		attach();
 		heap_base = getHeapBase(debughandle);
@@ -426,7 +454,7 @@ void sub_freeze(void *arg)
 		if (tid_now == 0)
 		{
 			mutexUnlock(&eventMutex);
-			svcSleepThread(3e+10L);
+			svcSleepThread(1e+10L);
 			wait_su = true;
 			continue;
 		}
@@ -456,9 +484,6 @@ void sub_freeze(void *arg)
 		svcSleepThread(3e+6L);
 		tid_now = 0;
 		pid = 0;
-		
-		if (*(u64*)arg != 0)
-			break;
 	}
 }
 
@@ -482,7 +507,7 @@ int main()
 	
 	Thread thread;
 	Result rc;
-	u64 thr_state = 0; // for releasing the thread
+	int fr_count = 0;
 	
 	initFreezes();
 	// poke thread
@@ -550,6 +575,9 @@ int main()
                 }
             }
         }
+		fr_count = getFreezeCount(false);
+		if (fr_count == 0)
+			thr_state = 2;
 		mutexUnlock(&eventMutex);
         svcSleepThread(mainLoopSleepTime * 1e+6L);
     }
