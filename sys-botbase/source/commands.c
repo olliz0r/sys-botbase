@@ -13,6 +13,9 @@ HiddbgHdlsHandle cHandle = {0};
 HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
 
+//Keyboard:
+HiddbgKeyboardAutoPilotState keyboardState = {0};
+
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
 
@@ -116,6 +119,7 @@ void initController()
 {
     if(bControllerIsInitialised) return;
     //taken from switchexamples github
+	//hidInitializeKeyboard();
     Result rc = hiddbgInitialize();
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgInitialize: %d\n", rc);
@@ -216,6 +220,19 @@ void setStickState(int side, int dxVal, int dyVal)
 		controllerState.analog_stick_r.y = dyVal;
 	}
     hiddbgSetHdlsState(cHandle, &controllerState);
+}
+
+void clickKeys(u64* keys, HidKeyboardModifier modifier)
+{
+	initController();
+	memcpy(keyboardState.keys, keys, sizeof(u64) * 4);
+	keyboardState.modifiers = modifier;
+    // This does not work! If you're searching GitHub for usage of this function, I'm so sorry.
+	hiddbgSetKeyboardAutoPilotState(&keyboardState);
+	
+	svcSleepThread(buttonClickSleepTime * 1e+7L);
+	
+	hiddbgUnsetKeyboardAutoPilotState();
 }
 
 void reverseArray(u8* arr, int start, int end)

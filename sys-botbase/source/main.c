@@ -56,6 +56,9 @@ void __appInit(void)
             setsysExit();
         }
     }
+	//rc = hidInitialize();
+    //if (R_FAILED(rc))
+    //    fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));
     rc = fsInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
@@ -91,6 +94,7 @@ void __appInit(void)
 void __appExit(void)
 {
     fsdevUnmountAll();
+	//hidExit();
     fsExit();
     smExit();
     audoutExit();
@@ -386,7 +390,25 @@ int argmain(int argc, char **argv)
 		clearFreezes();
 		thr_state = 2;
 	}
+	
+	//click key (does not work)
+	if (!strcmp(argv[0], "clickKeys"))
+	{
+		if(argc != 2)
+            return 0;
+		
+		u64 keys[4] = {0};
+		keys[0] = parseStringToInt(argv[1]);
+		clickKeys(keys, BIT(1));
+	}
 
+    //debug key (does not work)
+    if (!strcmp(argv[0], "debugKeys"))
+	{
+		u64 keys[4] = {0xA};
+		clickKeys(keys, BIT(1));
+	}
+	
     return 0;
 }
 
