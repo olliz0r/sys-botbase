@@ -322,7 +322,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.6\n");
+        printf("1.7\n");
     }
 
     return 0;
