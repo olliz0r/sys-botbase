@@ -28,3 +28,4 @@ void click(HidControllerKeys btn);
 void press(HidControllerKeys btn);
 void release(HidControllerKeys btn);
 void setStickState(int side, int dxVal, int dyVal);
+void touchNatural(u32 x, u32 y, u64 timeNanoseconds);

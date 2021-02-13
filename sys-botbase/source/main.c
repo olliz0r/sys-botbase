@@ -325,6 +325,27 @@ int argmain(int argc, char **argv)
         printf("1.7\n");
     }
 
+    //touch <x in the range 0-1280> <y in the range 0-720>
+    if(!strcmp(argv[0], "touch")){
+        if(argc != 3)
+            return 0;
+        
+        u32 tx = (u32) parseStringToInt(argv[1]);
+        u32 ty = (u32) parseStringToInt(argv[2]);
+        touchNatural(tx, ty, 1e+7L);
+    }
+
+    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in nanoseconds>
+    if(!strcmp(argv[0], "touchHold")){
+        if(argc != 4)
+            return 0;
+        
+        u32 tx = (u32) parseStringToInt(argv[1]);
+        u32 ty = (u32) parseStringToInt(argv[2]);
+        u64 time = parseStringToInt(argv[3]);
+        touchNatural(tx, ty, time);
+    }
+
     return 0;
 }
 

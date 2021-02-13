@@ -209,3 +209,26 @@ void setStickState(int side, int dxVal, int dyVal)
 	}
     hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
+
+void touchNatural(u32 x, u32 y, u64 timeNanoseconds)
+{
+    initController(); // this sets up hiddbg
+    HidTouchState touch = {0};
+    touch.diameter_x = 60u; touch.diameter_y = 60u;
+    touch.rotation_angle = 0u; // this or 67 are natural initial rotations, but not required
+    touch.x = x; touch.y = y;
+    touch.attributes = HidTouchAttribute_Start;
+
+    hiddbgSetTouchScreenAutoPilotState(&touch, 1);
+
+    svcSleepThread(1e+6L);
+
+    touch.delta_time += timeNanoseconds;
+    touch.attributes = HidTouchAttribute_End;
+
+    hiddbgSetTouchScreenAutoPilotState(&touch, 1);
+
+    svcSleepThread(1e+6L);
+
+    hiddbgUnsetTouchScreenAutoPilotState();
+}
