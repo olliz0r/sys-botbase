@@ -16,6 +16,7 @@ HiddbgHdlsState controllerState = {0};
 
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
+u32 fingerDiameter = 50;
 
 void attach()
 {
@@ -210,25 +211,26 @@ void setStickState(int side, int dxVal, int dyVal)
     hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
-void touchNatural(u32 x, u32 y, u64 timeNanoseconds)
+void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
 {
-    initController(); // this sets up hiddbg
-    HidTouchState touch = {0};
-    touch.diameter_x = 60u; touch.diameter_y = 60u;
-    touch.rotation_angle = 0u; // this or 67 are natural initial rotations, but not required
-    touch.x = x; touch.y = y;
-    touch.attributes = HidTouchAttribute_Start;
+    initController();
+    state->delta_time = holdTime;
+    for (u32 i = 0; i < sequentialCount; i++)
+    {
+        hiddbgSetTouchScreenAutoPilotState(&state[i], 1);
+        svcSleepThread(holdTime);
+        if (!hold)
+        {
+            hiddbgSetTouchScreenAutoPilotState(NULL, 0);
+            svcSleepThread(TOUCHPOLLMIN);
+        }
+    }
 
-    hiddbgSetTouchScreenAutoPilotState(&touch, 1);
-
-    svcSleepThread(1e+6L);
-
-    touch.delta_time += timeNanoseconds;
-    touch.attributes = HidTouchAttribute_End;
-
-    hiddbgSetTouchScreenAutoPilotState(&touch, 1);
-
-    svcSleepThread(1e+6L);
-
+    if(hold) // send finger release event
+    {
+        hiddbgSetTouchScreenAutoPilotState(NULL, 0);
+        svcSleepThread(TOUCHPOLLMIN);
+    }
+    
     hiddbgUnsetTouchScreenAutoPilotState();
 }

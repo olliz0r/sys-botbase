@@ -11,9 +11,9 @@ Don't even think of blaming me if anything goes wrong with you using this. It's 
 - [x] set complete controller state
 
 ### touchscreen input:
-- [ ] simulate touchscreen press
-- [ ] simulate touchscreen hold
-- [ ] simulate touchscreen drawing
+- [x] simulate touchscreen press
+- [x] simulate touchscreen hold
+- [x] simulate touchscreen drawing
 
 ### Memory reading:
 - [x] read x bytes of consecutive memory from RAM based on absolute memory address

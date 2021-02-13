@@ -267,6 +267,11 @@ int argmain(int argc, char **argv)
             u64 shouldActivate = parseStringToInt(argv[2]);
             debugResultCodes = shouldActivate != 0;
         }
+
+        if(!strcmp(argv[1], "fingerDiameter")){
+            u32 fDiameter = (u32) parseStringToInt(argv[2]);
+            fingerDiameter = fDiameter;
+        }
     }
 
     if(!strcmp(argv[0], "getTitleID")){
@@ -325,26 +330,58 @@ int argmain(int argc, char **argv)
         printf("1.7\n");
     }
 
-    //touch <x in the range 0-1280> <y in the range 0-720>
-    if(!strcmp(argv[0], "touch")){
-        if(argc != 3)
+    //touch followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is sequential taps, not different fingers. This locks the main thread for tapcount * 30ms
+    if (!strcmp(argv[0], "touch"))
+	{
+        if(argc < 3 || argc % 2 == 0)
             return 0;
-        
-        u32 tx = (u32) parseStringToInt(argv[1]);
-        u32 ty = (u32) parseStringToInt(argv[2]);
-        touchNatural(tx, ty, 1e+7L);
-    }
 
-    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in nanoseconds>
+        u32 count = (argc-1)/2;
+		HidTouchState state[count];
+        memset(state, 0, sizeof(state));
+        u32 i, j = 0;
+        for (i = 0; i < count; ++i)
+        {
+            state[i].diameter_x = state[i].diameter_y = fingerDiameter;
+            state[i].x = (u32) parseStringToInt(argv[++j]);
+            state[i].y = (u32) parseStringToInt(argv[++j]);
+        }
+
+        touch(state, count, TOUCHPOLLMIN, false);
+	}
+
+    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in nanoseconds (must be at least 15ms)>. This locks the main thread for 15ms + holdtime
     if(!strcmp(argv[0], "touchHold")){
         if(argc != 4)
             return 0;
-        
-        u32 tx = (u32) parseStringToInt(argv[1]);
-        u32 ty = (u32) parseStringToInt(argv[2]);
+
+        HidTouchState state = {0};
+        state.diameter_x = state.diameter_y = fingerDiameter;
+        state.x = (u32) parseStringToInt(argv[1]);
+        state.y = (u32) parseStringToInt(argv[2]);
         u64 time = parseStringToInt(argv[3]);
-        touchNatural(tx, ty, time);
+        touch(&state, 1, time, false);
     }
+
+    //touchDraw followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is vectors of where finger moves to, then removes the finger. This locks the main thread for vectorcount * 30ms + 15ms
+    if (!strcmp(argv[0], "touchDraw"))
+	{
+        if(argc < 3 || argc % 2 == 0)
+            return 0;
+
+        u32 count = (argc-1)/2;
+		HidTouchState state[count];
+        memset(state, 0, sizeof(state));
+        u32 i, j = 0;
+        for (i = 0; i < count; ++i)
+        {
+            state[i].diameter_x = state[i].diameter_y = fingerDiameter;
+            state[i].x = (u32) parseStringToInt(argv[++j]);
+            state[i].y = (u32) parseStringToInt(argv[++j]);
+        }
+
+        touch(state, count, TOUCHPOLLMIN * 2, true);
+	}
 
     return 0;
 }
