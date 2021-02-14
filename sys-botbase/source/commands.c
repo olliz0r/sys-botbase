@@ -9,7 +9,7 @@
 
 //Controller:
 bool bControllerIsInitialised = false;
-HiddbgHdlsHandle cHandle = {0};
+HiddbgHdlsHandle controllerHandle = {0};
 HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
 
@@ -18,6 +18,7 @@ HiddbgKeyboardAutoPilotState keyboardState = {0};
 
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
+u32 fingerDiameter = 50;
 
 void attach()
 {
@@ -141,7 +142,7 @@ void initController()
     rc = hiddbgAttachHdlsWorkBuffer();
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgAttachHdlsWorkBuffer: %d\n", rc);
-    rc = hiddbgAttachHdlsVirtualDevice(&cHandle, &controllerDevice);
+    rc = hiddbgAttachHdlsVirtualDevice(&controllerHandle, &controllerDevice);
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgAttachHdlsVirtualDevice: %d\n", rc);
     bControllerIsInitialised = true;
@@ -196,22 +197,22 @@ void press(HidControllerKeys btn)
 {
     initController();
     controllerState.buttons |= btn;
-    hiddbgSetHdlsState(cHandle, &controllerState);
+    hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
 void release(HidControllerKeys btn)
 {
     initController();
     controllerState.buttons &= ~btn;
-    hiddbgSetHdlsState(cHandle, &controllerState);
+    hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
 void setStickState(int side, int dxVal, int dyVal)
 {
     initController();
-	if (side == JOYSTICK_LEFT)
-	{
-		controllerState.analog_stick_l.x = dxVal;
+    if (side == JOYSTICK_LEFT)
+    {	
+        controllerState.analog_stick_l.x = dxVal;
 		controllerState.analog_stick_l.y = dyVal;
 	}
 	else
@@ -219,7 +220,7 @@ void setStickState(int side, int dxVal, int dyVal)
 		controllerState.analog_stick_r.x = dxVal;
 		controllerState.analog_stick_r.y = dyVal;
 	}
-    hiddbgSetHdlsState(cHandle, &controllerState);
+    hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
 void clickKeys(u64* keys, HidKeyboardModifier modifier)
@@ -270,3 +271,26 @@ u64 followMainPointer(u64* jumps, size_t count)
     return offset;
 }
 
+void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
+{
+    initController();
+    state->delta_time = holdTime;
+    for (u32 i = 0; i < sequentialCount; i++)
+    {
+        hiddbgSetTouchScreenAutoPilotState(&state[i], 1);
+        svcSleepThread(holdTime);
+        if (!hold)
+        {
+            hiddbgSetTouchScreenAutoPilotState(NULL, 0);
+            svcSleepThread(TOUCHPOLLMIN);
+        }
+    }
+
+    if(hold) // send finger release event
+    {
+        hiddbgSetTouchScreenAutoPilotState(NULL, 0);
+        svcSleepThread(TOUCHPOLLMIN);
+    }
+    
+    hiddbgUnsetTouchScreenAutoPilotState();
+}
