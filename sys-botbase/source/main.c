@@ -339,7 +339,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.7beri\n");
+        printf("1.7\n");
     }
 	
 	// follow pointers and print absolute offset (little endian)
