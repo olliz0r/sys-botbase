@@ -32,7 +32,6 @@ void click(HidControllerKeys btn);
 void press(HidControllerKeys btn);
 void release(HidControllerKeys btn);
 void setStickState(int side, int dxVal, int dyVal);
-void clickKeys(u64* keys, HidKeyboardModifier modifier);
 void reverseArray(u8* arr, int start, int end);
 u64 followMainPointer(u64* jumps, size_t count);
 void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold);

@@ -21,7 +21,7 @@
 // lock for freeze thread
 Mutex eventMutex;
 
-// for releasing or idling the thread
+// event for releasing or idling the thread
 u8 thr_state = 0; 
 
 // we aren't an applet
@@ -56,9 +56,6 @@ void __appInit(void)
             setsysExit();
         }
     }
-	//rc = hidInitialize();
-    //if (R_FAILED(rc))
-    //    fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));
     rc = fsInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
@@ -87,14 +84,11 @@ void __appInit(void)
     rc = capsscInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
-	
-    printf(CONSOLE_ESC(10;10H) "Hello World\n");
 }
 
 void __appExit(void)
 {
     fsdevUnmountAll();
-	//hidExit();
     fsExit();
     smExit();
     audoutExit();
@@ -394,24 +388,6 @@ int argmain(int argc, char **argv)
 	{
 		clearFreezes();
 		thr_state = 2;
-	}
-	
-	//click key (does not work)
-	if (!strcmp(argv[0], "clickKeys"))
-	{
-		if(argc != 2)
-            return 0;
-		
-		u64 keys[4] = {0};
-		keys[0] = parseStringToInt(argv[1]);
-		clickKeys(keys, BIT(1));
-	}
-
-    //debug key (does not work)
-    if (!strcmp(argv[0], "debugKeys"))
-	{
-		u64 keys[4] = {0xA};
-		clickKeys(keys, BIT(1));
 	}
 
     //touch followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is sequential taps, not different fingers. This locks the main thread for tapcount * 30ms
