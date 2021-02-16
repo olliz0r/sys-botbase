@@ -459,13 +459,40 @@ int argmain(int argc, char **argv)
             if (key < 4 || key > 231)
                 continue;
             keys[i][key / 64] |= 1UL << key;
-            modifiers[i] = 1024UL;
+            modifiers[i] = 1024UL; //numlock
         }
 
         key(keys, modifiers, argc-1);
 
         //free keys
         for (i = 0; i < argc-1; i++)
+            free(keys[i]);
+    }
+
+    //keyMod followed by arrayof: <HidKeyboardKey> <HidKeyboardModifier>(without the bitfield shift) to be pressed in sequential order
+    if (!strcmp(argv[0], "keyMod"))
+	{
+        if (argc < 3 || argc % 2 == 0)
+            return 0;
+
+        u32 count = (argc-1)/2;
+        u64* keys[count];
+        u64 modifiers[count];
+        u64 i, j = 0;
+        for (i = 0; i < count; i++)
+        {
+            keys[i] = calloc(4, sizeof(u64));
+            u8 key = (u8) parseStringToInt(argv[++j]);
+            if (key < 4 || key > 231)
+                continue;
+            keys[i][key / 64] = 1UL << key;
+            modifiers[i] = BIT((u8) parseStringToInt(argv[++j]));
+        }
+
+        key(keys, modifiers, count);
+
+        //free keys
+        for (i = 0; i < count; i++)
             free(keys[i]);
     }
 

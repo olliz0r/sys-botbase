@@ -294,8 +294,20 @@ void key(u64* keys[], u64* modifiers, u64 sequentialCount)
         tempState.modifiers = modifiers[i];
         hiddbgSetKeyboardAutoPilotState(&tempState);
         svcSleepThread(keyPressSleepTime * 1e+6L);
-        hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
-        svcSleepThread(POLLMIN);
+
+        if (i != (sequentialCount-1))
+        {
+            if (memcmp(keys[i], keys[i+1], sizeof(u64) * 4) == 0 && modifiers[i] == modifiers[i+1])
+            {
+                hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
+                svcSleepThread(POLLMIN);
+            }
+        }
+        else
+        {
+            hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
+            svcSleepThread(POLLMIN);
+        }
     }
 
     hiddbgUnsetKeyboardAutoPilotState();
