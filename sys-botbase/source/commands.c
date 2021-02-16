@@ -14,10 +14,11 @@ HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
 
 //Keyboard:
-HiddbgKeyboardAutoPilotState keyboardState = {0};
+HiddbgKeyboardAutoPilotState dummyKeyboardState = {0};
 
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
+u64 keyPressSleepTime = 25;
 u32 fingerDiameter = 50;
 
 void attach()
@@ -144,6 +145,8 @@ void initController()
     rc = hiddbgAttachHdlsVirtualDevice(&controllerHandle, &controllerDevice);
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgAttachHdlsVirtualDevice: %d\n", rc);
+    //init a dummy keyboard state for assignment between keypresses
+    dummyKeyboardState.keys[3] = 0x800000000000000UL; // Hackfix found by Red: an unused key press (KBD_MEDIA_CALC) is required to allow sequential same-key presses. bitfield[3]
     bControllerIsInitialised = true;
 }
 
@@ -260,7 +263,7 @@ u64 followMainPointer(u64* jumps, size_t count)
 void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
 {
     initController();
-    state->delta_time = holdTime;
+    state->delta_time = holdTime; // only the first touch needs this for whatever reason
     for (u32 i = 0; i < sequentialCount; i++)
     {
         hiddbgSetTouchScreenAutoPilotState(&state[i], 1);
@@ -268,15 +271,32 @@ void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
         if (!hold)
         {
             hiddbgSetTouchScreenAutoPilotState(NULL, 0);
-            svcSleepThread(TOUCHPOLLMIN);
+            svcSleepThread(POLLMIN);
         }
     }
 
     if(hold) // send finger release event
     {
         hiddbgSetTouchScreenAutoPilotState(NULL, 0);
-        svcSleepThread(TOUCHPOLLMIN);
+        svcSleepThread(POLLMIN);
     }
     
     hiddbgUnsetTouchScreenAutoPilotState();
+}
+
+void key(u64* keys[], u64* modifiers, u64 sequentialCount)
+{
+    initController();
+    HiddbgKeyboardAutoPilotState tempState = {0};
+    for (u32 i = 0; i < sequentialCount; i++)
+    {
+        memcpy(&tempState.keys, keys[i], sizeof(u64) * 4);
+        tempState.modifiers = modifiers[i];
+        hiddbgSetKeyboardAutoPilotState(&tempState);
+        svcSleepThread(keyPressSleepTime * 1e+6L);
+        hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
+        svcSleepThread(POLLMIN);
+    }
+
+    hiddbgUnsetKeyboardAutoPilotState();
 }

@@ -407,7 +407,7 @@ int argmain(int argc, char **argv)
             state[i].y = (u32) parseStringToInt(argv[++j]);
         }
 
-        touch(state, count, TOUCHPOLLMIN, false);
+        touch(state, count, POLLMIN, false);
 	}
 
     //touchHold <x in the range 0-1280> <y in the range 0-720> <time in nanoseconds (must be at least 15ms)>. This locks the main thread for 15ms + holdtime
@@ -440,8 +440,34 @@ int argmain(int argc, char **argv)
             state[i].y = (u32) parseStringToInt(argv[++j]);
         }
 
-        touch(state, count, TOUCHPOLLMIN * 2, true);
+        touch(state, count, POLLMIN * 2, true);
 	}
+
+    //key followed by arrayof: <HidKeyboardKey> to be pressed in sequential order
+    //thank you Red (hp3721) for this functionality
+    if (!strcmp(argv[0], "key"))
+	{
+        if (argc < 2)
+            return 0;
+        u64* keys[argc-1];
+        u64 modifiers[argc-1];
+        u64 i;
+        for (i = 0; i < argc-1; i++)
+        {
+            keys[i] = calloc(4, sizeof(u64)); // alloc even if key isn't valid so free doesn't give us UB
+            u8 key = (u8) parseStringToInt(argv[i+1]);
+            if (key < 4 || key > 231)
+                continue;
+            keys[i][key / 64] |= 1UL << key;
+            modifiers[i] = 1024UL;
+        }
+
+        key(keys, modifiers, argc-1);
+
+        //free keys
+        for (i = 0; i < argc-1; i++)
+            free(keys[i]);
+    }
 
     return 0;
 }
