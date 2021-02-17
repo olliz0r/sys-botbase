@@ -365,7 +365,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.7beri\n");
+        printf("1.7\n");
     }
 	
 	// follow pointers and print absolute offset (little endian)
@@ -745,19 +745,19 @@ void sub_touch(void *arg)
 {
     while (1)
     {
-        TouchData touchy = *(TouchData*)arg;
-        if (touchy.state == 1)
+        TouchData* touchPtr = (TouchData*)arg;
+        if (touchPtr->state == 1)
         {
             mutexLock(&touchMutex); // don't allow any more assignments to the touch var (will lock the main thread)
-            touch(touchy.states, touchy.sequentialCount, touchy.holdTime, touchy.hold);
-            free(touchy.states);
-            touchy.state = 0;
+            touch(touchPtr->states, touchPtr->sequentialCount, touchPtr->holdTime, touchPtr->hold);
+            free(touchPtr->states);
+            touchPtr->state = 0;
             mutexUnlock(&touchMutex);
         }
 
         svcSleepThread(1e+6L);
 
-        if (touchy.state == 3)
+        if (touchPtr->state == 3)
             break;
     }
 }
@@ -766,19 +766,19 @@ void sub_key(void *arg)
 {
     while (1)
     {
-        KeyData keyy = *(KeyData*)arg;
-        if (keyy.state == 1)
+        KeyData* keyPtr = (KeyData*)arg;
+        if (keyPtr->state == 1)
         {
             mutexLock(&keyMutex); 
-            key(keyy.states, keyy.sequentialCount);
-            free(keyy.states);
-            keyy.state = 0;
+            key(keyPtr->states, keyPtr->sequentialCount);
+            free(keyPtr->states);
+            keyPtr->state = 0;
             mutexUnlock(&keyMutex);
         }
 
         svcSleepThread(1e+6L);
 
-        if (keyy.state == 3)
+        if (keyPtr->state == 3)
             break;
     }
 }
