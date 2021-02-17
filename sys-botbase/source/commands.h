@@ -18,6 +18,20 @@ typedef struct {
     u8 buildID[0x20];
 } MetaData;
 
+typedef struct {
+    HidTouchState* states;
+    u64 sequentialCount;
+    u64 holdTime;
+    bool hold;
+    u8 state;
+} TouchData;
+
+typedef struct {
+    HiddbgKeyboardAutoPilotState* states;
+    u64 sequentialCount;
+    u8 state;
+} KeyData;
+
 void attach();
 void detach();
 u64 getMainNsoBase(u64 pid);
@@ -35,6 +49,6 @@ void press(HidControllerKeys btn);
 void release(HidControllerKeys btn);
 void setStickState(int side, int dxVal, int dyVal);
 void reverseArray(u8* arr, int start, int end);
-u64 followMainPointer(u64* jumps, size_t count);
+u64 followMainPointer(s64* jumps, size_t count);
 void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold);
-void key(u64* keys[], u64* modifiers, u64 sequentialCount);
+void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount);

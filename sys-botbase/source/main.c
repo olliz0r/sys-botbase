@@ -16,13 +16,23 @@
 
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x000800000
-#define THREAD_SIZE 0x200000
+#define THREAD_SIZE 0x20000
 
-// lock for freeze thread
-Mutex eventMutex;
+Thread freezeThread, touchThread, keyboardThread;
 
-// event for releasing or idling the thread
-u8 thr_state = 0; 
+// prototype thread functions to give the illusion of cleanliness
+void sub_freeze(void *arg);
+void sub_touch(void *arg);
+void sub_key(void *arg);
+
+// locks for thread
+Mutex freezeMutex, touchMutex, keyMutex;
+
+// events for releasing or idling threads
+u8 freeze_thr_state = 0; 
+// key and touch events currently being processed
+KeyData currentKeyEvent = {0};
+TouchData currentTouchEvent = {0};
 
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
@@ -100,6 +110,28 @@ u64 mainLoopSleepTime = 50;
 bool debugResultCodes = false;
 
 bool echoCommands = false;
+
+void makeTouch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
+{
+    mutexLock(&touchMutex);
+    memset(&currentTouchEvent, 0, sizeof currentTouchEvent);
+    currentTouchEvent.states = state;
+    currentTouchEvent.sequentialCount = sequentialCount;
+    currentTouchEvent.holdTime = holdTime;
+    currentTouchEvent.hold = hold;
+    currentTouchEvent.state = 1;
+    mutexUnlock(&touchMutex);
+}
+
+void makeKeys(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
+{
+    mutexLock(&keyMutex);
+    memset(&currentKeyEvent, 0, sizeof currentKeyEvent);
+    currentKeyEvent.states = states;
+    currentKeyEvent.sequentialCount = sequentialCount;
+    currentKeyEvent.state = 1;
+    mutexUnlock(&keyMutex);
+}
 
 int argmain(int argc, char **argv)
 {
@@ -333,7 +365,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.7\n");
+        printf("1.7beri\n");
     }
 	
 	// follow pointers and print absolute offset (little endian)
@@ -342,9 +374,9 @@ int argmain(int argc, char **argv)
 	{
 		if(argc < 2)
             return 0;
-		u64 jumps[argc-1];
+		s64 jumps[argc-1];
 		for (int i = 1; i < argc; ++i)
-			jumps[i-1] = parseStringToInt(argv[i]);
+			jumps[i-1] = parseStringToSignedLong(argv[i]);
 		u64 solved = followMainPointer(jumps, argc-1);
 		//flip endian
 		u8* solvedReverse = (u8*) &solved;
@@ -387,18 +419,17 @@ int argmain(int argc, char **argv)
 	if (!strcmp(argv[0], "freezeClear"))
 	{
 		clearFreezes();
-		thr_state = 2;
+		freeze_thr_state = 2;
 	}
 
-    //touch followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is sequential taps, not different fingers. This locks the main thread for tapcount * 30ms
+    //touch followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is sequential taps, not different fingers. This locks the main thread for tapcount * 34ms
     if (!strcmp(argv[0], "touch"))
 	{
         if(argc < 3 || argc % 2 == 0)
             return 0;
 
         u32 count = (argc-1)/2;
-		HidTouchState state[count];
-        memset(state, 0, sizeof(state));
+		HidTouchState* state = calloc(count, sizeof(HidTouchState));
         u32 i, j = 0;
         for (i = 0; i < count; ++i)
         {
@@ -407,31 +438,30 @@ int argmain(int argc, char **argv)
             state[i].y = (u32) parseStringToInt(argv[++j]);
         }
 
-        touch(state, count, POLLMIN, false);
+        makeTouch(state, count, POLLMIN, false);
 	}
 
-    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in nanoseconds (must be at least 15ms)>. This locks the main thread for 15ms + holdtime
+    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in nanoseconds (must be at least 15ms)>. This locks the main thread for 17ms + holdtime
     if(!strcmp(argv[0], "touchHold")){
         if(argc != 4)
             return 0;
 
-        HidTouchState state = {0};
-        state.diameter_x = state.diameter_y = fingerDiameter;
-        state.x = (u32) parseStringToInt(argv[1]);
-        state.y = (u32) parseStringToInt(argv[2]);
+        HidTouchState* state = calloc(1, sizeof(HidTouchState));
+        state->diameter_x = state->diameter_y = fingerDiameter;
+        state->x = (u32) parseStringToInt(argv[1]);
+        state->y = (u32) parseStringToInt(argv[2]);
         u64 time = parseStringToInt(argv[3]);
-        touch(&state, 1, time, false);
+        makeTouch(state, 1, time, false);
     }
 
-    //touchDraw followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is vectors of where finger moves to, then removes the finger. This locks the main thread for vectorcount * 30ms + 15ms
+    //touchDraw followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is vectors of where finger moves to, then removes the finger. This locks the main thread for vectorcount * 34ms + 17ms
     if (!strcmp(argv[0], "touchDraw"))
 	{
         if(argc < 3 || argc % 2 == 0)
             return 0;
 
         u32 count = (argc-1)/2;
-		HidTouchState state[count];
-        memset(state, 0, sizeof(state));
+		HidTouchState* state = calloc(count, sizeof(HidTouchState));
         u32 i, j = 0;
         for (i = 0; i < count; ++i)
         {
@@ -440,7 +470,7 @@ int argmain(int argc, char **argv)
             state[i].y = (u32) parseStringToInt(argv[++j]);
         }
 
-        touch(state, count, POLLMIN * 2, true);
+        makeTouch(state, count, POLLMIN * 2, true);
 	}
 
     //key followed by arrayof: <HidKeyboardKey> to be pressed in sequential order
@@ -449,24 +479,20 @@ int argmain(int argc, char **argv)
 	{
         if (argc < 2)
             return 0;
-        u64* keys[argc-1];
-        u64 modifiers[argc-1];
+        
+        u64 count = argc-1;
+        HiddbgKeyboardAutoPilotState* keystates = calloc(count, sizeof (HiddbgKeyboardAutoPilotState));
         u64 i;
-        for (i = 0; i < argc-1; i++)
+        for (i = 0; i < count; i++)
         {
-            keys[i] = calloc(4, sizeof(u64)); // alloc even if key isn't valid so free doesn't give us UB
             u8 key = (u8) parseStringToInt(argv[i+1]);
             if (key < 4 || key > 231)
                 continue;
-            keys[i][key / 64] |= 1UL << key;
-            modifiers[i] = 1024UL; //numlock
+            keystates[i].keys[key / 64] = 1UL << key;
+            keystates[i].modifiers = 1024UL; //numlock
         }
 
-        key(keys, modifiers, argc-1);
-
-        //free keys
-        for (i = 0; i < argc-1; i++)
-            free(keys[i]);
+        makeKeys(keystates, count);
     }
 
     //keyMod followed by arrayof: <HidKeyboardKey> <HidKeyboardModifier>(without the bitfield shift) to be pressed in sequential order
@@ -476,24 +502,18 @@ int argmain(int argc, char **argv)
             return 0;
 
         u32 count = (argc-1)/2;
-        u64* keys[count];
-        u64 modifiers[count];
+        HiddbgKeyboardAutoPilotState* keystates = calloc(count, sizeof (HiddbgKeyboardAutoPilotState));
         u64 i, j = 0;
         for (i = 0; i < count; i++)
         {
-            keys[i] = calloc(4, sizeof(u64));
             u8 key = (u8) parseStringToInt(argv[++j]);
             if (key < 4 || key > 231)
                 continue;
-            keys[i][key / 64] = 1UL << key;
-            modifiers[i] = BIT((u8) parseStringToInt(argv[++j]));
+            keystates[i].keys[key / 64] = 1UL << key;
+            keystates[i].modifiers = BIT((u8) parseStringToInt(argv[++j]));
         }
 
-        key(keys, modifiers, count);
-
-        //free keys
-        for (i = 0; i < count; i++)
-            free(keys[i]);
+        makeKeys(keystates, count);
     }
 
     return 0;
@@ -520,83 +540,6 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count)
     (*fd_count)--;
 }
 
-void sub_freeze(void *arg)
-{
-	u64 heap_base;
-	u64 tid_now = 0;
-	u64 pid = 0;
-	bool wait_su = false;
-	int freezecount = 0;
-	
-	IDLE:while (freezecount == 0)
-	{
-		if (*(u8*)arg == 1)
-			break;
-		
-		// do nothing
-		svcSleepThread(1e+9L);
-		freezecount = getFreezeCount(false);
-	}
-	
-	while (1)
-	{
-		if (*(u8*)arg == 1)
-			break;
-		
-		if (*(u8*)arg == 2) // no freeze
-		{
-			mutexLock(&eventMutex);
-			thr_state = 0;
-			mutexUnlock(&eventMutex); // stupid but it works so is it really stupid? (yes)
-			freezecount = 0;
-			wait_su = false;
-			goto IDLE;
-		}
-		
-		mutexLock(&eventMutex);
-		attach();
-		heap_base = getHeapBase(debughandle);
-		pmdmntGetApplicationProcessId(&pid);
-		tid_now = getTitleId(pid);
-		detach();
-		
-		// don't freeze on startup of new tid to remove any chance of save corruption
-		if (tid_now == 0)
-		{
-			mutexUnlock(&eventMutex);
-			svcSleepThread(1e+10L);
-			wait_su = true;
-			continue;
-		}
-		
-		if (wait_su)
-		{
-			mutexUnlock(&eventMutex);
-			svcSleepThread(3e+10L);
-			wait_su = false;
-			mutexLock(&eventMutex);
-		}
-		
-		if (heap_base > 0)
-		{
-			attach();
-			for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
-			{
-				if (freezes[j].state == 1 && freezes[j].titleId == tid_now)
-				{
-					writeMem(heap_base + freezes[j].address, freezes[j].size, freezes[j].vData);
-				}
-			}
-			detach();
-		}
-		
-		mutexUnlock(&eventMutex);
-		svcSleepThread(3e+6L);
-		tid_now = 0;
-		pid = 0;
-	}
-}
-
 int main()
 {
     char *linebuf = malloc(sizeof(char) * MAX_LINE_LENGTH);
@@ -615,24 +558,34 @@ int main()
 
     int newfd;
 	
-	Thread thread;
 	Result rc;
 	int fr_count = 0;
 	
-	initFreezes();
-	// poke thread
-	mutexInit(&eventMutex);
-	rc = threadCreate(&thread, sub_freeze, (void*)&thr_state, NULL, THREAD_SIZE, 0x2C, -2); 
-	
+    initFreezes();
+
+	// freeze thread
+	mutexInit(&freezeMutex);
+	rc = threadCreate(&freezeThread, sub_freeze, (void*)&freeze_thr_state, NULL, THREAD_SIZE, 0x2C, -2); 
 	if (R_SUCCEEDED(rc))
-    {
-        rc = threadStart(&thread);
-	}
+        rc = threadStart(&freezeThread);
+
+    // touch thread
+    mutexInit(&touchMutex);
+    rc = threadCreate(&touchThread, sub_touch, (void*)&currentTouchEvent, NULL, THREAD_SIZE, 0x2C, -2); 
+    if (R_SUCCEEDED(rc))
+        rc = threadStart(&touchThread);
+
+    // key thread
+    mutexInit(&keyMutex);
+    rc = threadCreate(&keyboardThread, sub_key, (void*)&currentKeyEvent, NULL, THREAD_SIZE, 0x2C, -2); 
+    if (R_SUCCEEDED(rc))
+        rc = threadStart(&keyboardThread);
+    
 	
     while (appletMainLoop())
     {
         poll(pfds, fd_count, -1);
-		mutexLock(&eventMutex);
+		mutexLock(&freezeMutex);
         for(int i = 0; i < fd_count; i++) 
         {
             if (pfds[i].revents & POLLIN) 
@@ -687,21 +640,145 @@ int main()
         }
 		fr_count = getFreezeCount(false);
 		if (fr_count == 0)
-			thr_state = 2;
-		mutexUnlock(&eventMutex);
+			freeze_thr_state = 2;
+		mutexUnlock(&freezeMutex);
         svcSleepThread(mainLoopSleepTime * 1e+6L);
     }
-
-	thr_state = 1;
 	
 	if (R_SUCCEEDED(rc))
     {
-		threadWaitForExit(&thread);
-        threadClose(&thread);
+	    freeze_thr_state = 1;
+		threadWaitForExit(&freezeThread);
+        threadClose(&freezeThread);
+        currentTouchEvent.state = 3;
+        threadWaitForExit(&touchThread);
+        threadClose(&touchThread);
+        currentKeyEvent.state = 3;
+        threadWaitForExit(&keyboardThread);
+        threadClose(&keyboardThread);
 	}
 	
 	clearFreezes();
-	freeFreezes();
+    freeFreezes();
 	
     return 0;
+}
+
+void sub_freeze(void *arg)
+{
+	u64 heap_base;
+	u64 tid_now = 0;
+	u64 pid = 0;
+	bool wait_su = false;
+	int freezecount = 0;
+	
+	IDLE:while (freezecount == 0)
+	{
+		if (*(u8*)arg == 1)
+			break;
+		
+		// do nothing
+		svcSleepThread(1e+9L);
+		freezecount = getFreezeCount(false);
+	}
+	
+	while (1)
+	{
+		if (*(u8*)arg == 1)
+			break;
+		
+		if (*(u8*)arg == 2) // no freeze
+		{
+			mutexLock(&freezeMutex);
+			freeze_thr_state = 0;
+			mutexUnlock(&freezeMutex); // stupid but it works so is it really stupid? (yes)
+			freezecount = 0;
+			wait_su = false;
+			goto IDLE;
+		}
+		
+		mutexLock(&freezeMutex);
+		attach();
+		heap_base = getHeapBase(debughandle);
+		pmdmntGetApplicationProcessId(&pid);
+		tid_now = getTitleId(pid);
+		detach();
+		
+		// don't freeze on startup of new tid to remove any chance of save corruption
+		if (tid_now == 0)
+		{
+			mutexUnlock(&freezeMutex);
+			svcSleepThread(1e+10L);
+			wait_su = true;
+			continue;
+		}
+		
+		if (wait_su)
+		{
+			mutexUnlock(&freezeMutex);
+			svcSleepThread(3e+10L);
+			wait_su = false;
+			mutexLock(&freezeMutex);
+		}
+		
+		if (heap_base > 0)
+		{
+			attach();
+			for (int j = 0; j < FREEZE_DIC_LENGTH; j++)
+			{
+				if (freezes[j].state == 1 && freezes[j].titleId == tid_now)
+				{
+					writeMem(heap_base + freezes[j].address, freezes[j].size, freezes[j].vData);
+				}
+			}
+			detach();
+		}
+		
+		mutexUnlock(&freezeMutex);
+		svcSleepThread(3e+6L);
+		tid_now = 0;
+		pid = 0;
+	}
+}
+
+void sub_touch(void *arg)
+{
+    while (1)
+    {
+        TouchData touchy = *(TouchData*)arg;
+        if (touchy.state == 1)
+        {
+            mutexLock(&touchMutex); // don't allow any more assignments to the touch var (will lock the main thread)
+            touch(touchy.states, touchy.sequentialCount, touchy.holdTime, touchy.hold);
+            free(touchy.states);
+            touchy.state = 0;
+            mutexUnlock(&touchMutex);
+        }
+
+        svcSleepThread(1e+6L);
+
+        if (touchy.state == 3)
+            break;
+    }
+}
+
+void sub_key(void *arg)
+{
+    while (1)
+    {
+        KeyData keyy = *(KeyData*)arg;
+        if (keyy.state == 1)
+        {
+            mutexLock(&keyMutex); 
+            key(keyy.states, keyy.sequentialCount);
+            free(keyy.states);
+            keyy.state = 0;
+            mutexUnlock(&keyMutex);
+        }
+
+        svcSleepThread(1e+6L);
+
+        if (keyy.state == 3)
+            break;
+    }
 }

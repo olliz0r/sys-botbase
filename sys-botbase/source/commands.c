@@ -238,12 +238,12 @@ void reverseArray(u8* arr, int start, int end)
     }   
 } 
 
-u64 followMainPointer(u64* jumps, size_t count) 
+u64 followMainPointer(s64* jumps, size_t count) 
 {
 	u64 offset;
     u64 size = sizeof offset;
 	u8 *out = malloc(size);
-	MetaData meta = getMetaData(); // double attach but let's deal with micro-optimizations later
+	MetaData meta = getMetaData(); 
 	
 	attach();
 	readMem(out, meta.main_nso_base + jumps[0], size);
@@ -251,7 +251,7 @@ u64 followMainPointer(u64* jumps, size_t count)
 	int i;
     for (i = 1; i < count; ++i)
 	{
-		readMem(out, jumps[i] + offset, size);
+		readMem(out, offset + jumps[i], size);
 		offset = *(u64*)out;
 	}
 	detach();
@@ -284,20 +284,21 @@ void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
     hiddbgUnsetTouchScreenAutoPilotState();
 }
 
-void key(u64* keys[], u64* modifiers, u64 sequentialCount)
+void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
 {
     initController();
     HiddbgKeyboardAutoPilotState tempState = {0};
-    for (u32 i = 0; i < sequentialCount; i++)
+    u32 i;
+    for (i = 0; i < sequentialCount; i++)
     {
-        memcpy(&tempState.keys, keys[i], sizeof(u64) * 4);
-        tempState.modifiers = modifiers[i];
+        memcpy(&tempState.keys, states[i].keys, sizeof(u64) * 4);
+        tempState.modifiers = states[i].modifiers;
         hiddbgSetKeyboardAutoPilotState(&tempState);
         svcSleepThread(keyPressSleepTime * 1e+6L);
 
         if (i != (sequentialCount-1))
         {
-            if (memcmp(keys[i], keys[i+1], sizeof(u64) * 4) == 0 && modifiers[i] == modifiers[i+1])
+            if (memcmp(states[i].keys, states[i+1].keys, sizeof(u64) * 4) == 0 && states[i].modifiers == states[i+1].modifiers)
             {
                 hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
                 svcSleepThread(POLLMIN);
