@@ -15,7 +15,7 @@
 #include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
-#define HEAP_SIZE 0x000800000
+#define HEAP_SIZE 0x001000000
 #define THREAD_SIZE 0x20000
 
 Thread freezeThread, touchThread, keyboardThread;
@@ -107,6 +107,7 @@ void __appExit(void)
 }
 
 u64 mainLoopSleepTime = 50;
+u64 freezeRate = 3;
 bool debugResultCodes = false;
 
 bool echoCommands = false;
@@ -285,7 +286,6 @@ int argmain(int argc, char **argv)
         if(argc != 3)
             return 0;
 
-
         if(!strcmp(argv[1], "mainLoopSleepTime")){
             u64 time = parseStringToInt(argv[2]);
             mainLoopSleepTime = time;
@@ -305,10 +305,25 @@ int argmain(int argc, char **argv)
             u64 shouldActivate = parseStringToInt(argv[2]);
             debugResultCodes = shouldActivate != 0;
         }
+        
+        if(!strcmp(argv[1], "keySleepTime")){
+            u64 keyTime = parseStringToInt(argv[2]);
+            keyPressSleepTime = keyTime;
+        }
 
         if(!strcmp(argv[1], "fingerDiameter")){
             u32 fDiameter = (u32) parseStringToInt(argv[2]);
             fingerDiameter = fDiameter;
+        }
+
+        if(!strcmp(argv[1], "pollRate")){
+            u64 fPollRate = parseStringToInt(argv[2]);
+            pollRate = fPollRate;
+        }
+
+        if(!strcmp(argv[1], "freezeRate")){
+            u64 fFreezeRate = parseStringToInt(argv[2]);
+            freezeRate = fFreezeRate;
         }
     }
 
@@ -368,20 +383,16 @@ int argmain(int argc, char **argv)
         printf("1.7\n");
     }
 	
-	// follow pointers and print absolute offset (little endian)
+	// follow pointers and print absolute offset (little endian, flip it yourself if required)
 	// pointer <first (main) jump> <additional jumps> !!do not add the last jump in pointerexpr here, add it yourself!!
 	if (!strcmp(argv[0], "pointer"))
 	{
 		if(argc < 2)
             return 0;
 		s64 jumps[argc-1];
-		for (int i = 1; i < argc; ++i)
+		for (int i = 1; i < argc; i++)
 			jumps[i-1] = parseStringToSignedLong(argv[i]);
 		u64 solved = followMainPointer(jumps, argc-1);
-		//flip endian
-		u8* solvedReverse = (u8*) &solved;
-		reverseArray(solvedReverse, 0, 7);
-		solved = *(u64*) solvedReverse;
 		printf("%016lX\n", solved);
 	}
 	
@@ -438,10 +449,10 @@ int argmain(int argc, char **argv)
             state[i].y = (u32) parseStringToInt(argv[++j]);
         }
 
-        makeTouch(state, count, POLLMIN, false);
+        makeTouch(state, count, pollRate * 1e+6L, false);
 	}
 
-    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in nanoseconds (must be at least 15ms)>. This locks the main thread for 17ms + holdtime
+    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in milliseconds (must be at least 15ms)>. This locks the main thread for 17ms + holdtime
     if(!strcmp(argv[0], "touchHold")){
         if(argc != 4)
             return 0;
@@ -451,7 +462,7 @@ int argmain(int argc, char **argv)
         state->x = (u32) parseStringToInt(argv[1]);
         state->y = (u32) parseStringToInt(argv[2]);
         u64 time = parseStringToInt(argv[3]);
-        makeTouch(state, 1, time, false);
+        makeTouch(state, 1, time * 1e+6L, false);
     }
 
     //touchDraw followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is vectors of where finger moves to, then removes the finger. This locks the main thread for vectorcount * 34ms + 17ms
@@ -470,7 +481,7 @@ int argmain(int argc, char **argv)
             state[i].y = (u32) parseStringToInt(argv[++j]);
         }
 
-        makeTouch(state, count, POLLMIN * 2, true);
+        makeTouch(state, count, pollRate * 1e+6L * 2, true);
 	}
 
     //key followed by arrayof: <HidKeyboardKey> to be pressed in sequential order
@@ -735,7 +746,7 @@ void sub_freeze(void *arg)
 		}
 		
 		mutexUnlock(&freezeMutex);
-		svcSleepThread(3e+6L);
+		svcSleepThread(freezeRate * 1e+6L);
 		tid_now = 0;
 		pid = 0;
 	}

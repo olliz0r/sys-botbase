@@ -1,5 +1,4 @@
 #include <switch.h>
-#define POLLMIN 17000000L // polling is linked to screen refresh rate (system UI) or game framerate. Most cases this is 1/60 or 1/30
 
 extern Handle debughandle;
 extern bool bControllerIsInitialised;
@@ -9,6 +8,7 @@ extern HiddbgHdlsState controllerState;
 extern HiddbgKeyboardAutoPilotState dummyKeyboardState;
 extern u64 buttonClickSleepTime;
 extern u64 keyPressSleepTime;
+extern u64 pollRate;
 extern u32 fingerDiameter;
 
 typedef struct {

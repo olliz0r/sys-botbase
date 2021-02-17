@@ -19,6 +19,7 @@ HiddbgKeyboardAutoPilotState dummyKeyboardState = {0};
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
 u64 keyPressSleepTime = 25;
+u64 pollRate = 17; // polling is linked to screen refresh rate (system UI) or game framerate. Most cases this is 1/60 or 1/30
 u32 fingerDiameter = 50;
 
 void attach()
@@ -271,14 +272,14 @@ void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
         if (!hold)
         {
             hiddbgSetTouchScreenAutoPilotState(NULL, 0);
-            svcSleepThread(POLLMIN);
+            svcSleepThread(pollRate * 1e+6L);
         }
     }
 
     if(hold) // send finger release event
     {
         hiddbgSetTouchScreenAutoPilotState(NULL, 0);
-        svcSleepThread(POLLMIN);
+        svcSleepThread(pollRate * 1e+6L);
     }
     
     hiddbgUnsetTouchScreenAutoPilotState();
@@ -301,13 +302,13 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
             if (memcmp(states[i].keys, states[i+1].keys, sizeof(u64) * 4) == 0 && states[i].modifiers == states[i+1].modifiers)
             {
                 hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
-                svcSleepThread(POLLMIN);
+                svcSleepThread(pollRate * 1e+6L);
             }
         }
         else
         {
             hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
-            svcSleepThread(POLLMIN);
+            svcSleepThread(pollRate * 1e+6L);
         }
     }
 
