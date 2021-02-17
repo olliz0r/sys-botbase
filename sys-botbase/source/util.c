@@ -40,6 +40,17 @@ u64 parseStringToInt(char* arg){
     return ret;
 }
 
+s64 parseStringToSignedLong(char* arg){
+    if(strlen(arg) > 2){
+        if(arg[1] == 'x' || arg[2] == 'x'){
+            s64 ret = strtol(arg, NULL, 16);
+            return ret;
+        }
+    }
+    s64 ret = strtol(arg, NULL, 10);
+    return ret;
+}
+
 u8* parseStringToByteBuffer(char* arg, u64* size)
 {
     char toTranslate[3] = {0};
