@@ -433,7 +433,7 @@ int argmain(int argc, char **argv)
 		freeze_thr_state = 2;
 	}
 
-    //touch followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is sequential taps, not different fingers. This locks the main thread for tapcount * 34ms
+    //touch followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is sequential taps, not different fingers. Functions in its own thread, but will not allow the call again while running. tapcount * pollRate * 2
     if (!strcmp(argv[0], "touch"))
 	{
         if(argc < 3 || argc % 2 == 0)
@@ -452,7 +452,7 @@ int argmain(int argc, char **argv)
         makeTouch(state, count, pollRate * 1e+6L, false);
 	}
 
-    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in milliseconds (must be at least 15ms)>. This locks the main thread for 17ms + holdtime
+    //touchHold <x in the range 0-1280> <y in the range 0-720> <time in milliseconds (must be at least 15ms)>. Functions in its own thread, but will not allow the call again while running. pollRate + holdtime
     if(!strcmp(argv[0], "touchHold")){
         if(argc != 4)
             return 0;
@@ -465,7 +465,7 @@ int argmain(int argc, char **argv)
         makeTouch(state, 1, time * 1e+6L, false);
     }
 
-    //touchDraw followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is vectors of where finger moves to, then removes the finger. This locks the main thread for vectorcount * 34ms + 17ms
+    //touchDraw followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is vectors of where finger moves to, then removes the finger. Functions in its own thread, but will not allow the call again while running. (vectorcount * pollRate * 2) + pollRate
     if (!strcmp(argv[0], "touchDraw"))
 	{
         if(argc < 3 || argc % 2 == 0)
