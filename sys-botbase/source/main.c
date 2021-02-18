@@ -527,6 +527,26 @@ int argmain(int argc, char **argv)
         makeKeys(keystates, count);
     }
 
+    //keyMulti followed by arrayof: <HidKeyboardKey> to be pressed at the same time.
+    if (!strcmp(argv[0], "keyMulti"))
+	{
+        if (argc < 2)
+            return 0;
+        
+        u64 count = argc-1;
+        HiddbgKeyboardAutoPilotState* keystate = calloc(1, sizeof (HiddbgKeyboardAutoPilotState));
+        u64 i;
+        for (i = 0; i < count; i++)
+        {
+            u8 key = (u8) parseStringToInt(argv[i+1]);
+            if (key < 4 || key > 231)
+                continue;
+            keystate[0].keys[key / 64] |= 1UL << key;
+        }
+
+        makeKeys(keystate, 1);
+    }
+
     return 0;
 }
 
