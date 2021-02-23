@@ -18,6 +18,13 @@
 #define HEAP_SIZE 0x001000000
 #define THREAD_SIZE 0x20000
 
+typedef enum {
+    Active = 0,
+    Exit = 1,
+    Idle = 2,
+    Pause = 3
+} FreezeThreadState;
+
 Thread freezeThread, touchThread, keyboardThread;
 
 // prototype thread functions to give the illusion of cleanliness
@@ -29,7 +36,7 @@ void sub_key(void *arg);
 Mutex freezeMutex, touchMutex, keyMutex;
 
 // events for releasing or idling threads
-u8 freeze_thr_state = 0; 
+FreezeThreadState freeze_thr_state = Active; 
 // key and touch events currently being processed
 KeyData currentKeyEvent = {0};
 TouchData currentTouchEvent = {0};
@@ -90,7 +97,6 @@ void __appInit(void)
     rc = socketInitializeDefault();
     if (R_FAILED(rc))
         fatalThrow(rc);
-
     rc = capsscInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
@@ -447,9 +453,15 @@ int argmain(int argc, char **argv)
 	if (!strcmp(argv[0], "freezeClear"))
 	{
 		clearFreezes();
-		freeze_thr_state = 2;
+		freeze_thr_state = Idle;
 	}
 
+    if (!strcmp(argv[0], "freezePause"))
+		freeze_thr_state = Pause;
+
+    if (!strcmp(argv[0], "freezeUnpause"))
+		freeze_thr_state = Active;
+	
     //touch followed by arrayof: <x in the range 0-1280> <y in the range 0-720>. Array is sequential taps, not different fingers. Functions in its own thread, but will not allow the call again while running. tapcount * pollRate * 2
     if (!strcmp(argv[0], "touch"))
 	{
@@ -688,14 +700,14 @@ int main()
         }
 		fr_count = getFreezeCount(false);
 		if (fr_count == 0)
-			freeze_thr_state = 2;
+			freeze_thr_state = Idle;
 		mutexUnlock(&freezeMutex);
         svcSleepThread(mainLoopSleepTime * 1e+6L);
     }
 	
 	if (R_SUCCEEDED(rc))
     {
-	    freeze_thr_state = 1;
+	    freeze_thr_state = Exit;
 		threadWaitForExit(&freezeThread);
         threadClose(&freezeThread);
         currentTouchEvent.state = 3;
@@ -722,7 +734,7 @@ void sub_freeze(void *arg)
 	
 	IDLE:while (freezecount == 0)
 	{
-		if (*(u8*)arg == 1)
+		if (*(FreezeThreadState*)arg == Exit)
 			break;
 		
 		// do nothing
@@ -732,18 +744,23 @@ void sub_freeze(void *arg)
 	
 	while (1)
 	{
-		if (*(u8*)arg == 1)
+		if (*(FreezeThreadState*)arg == Exit)
 			break;
 		
-		if (*(u8*)arg == 2) // no freeze
+		if (*(FreezeThreadState*)arg == Idle) // no freeze
 		{
 			mutexLock(&freezeMutex);
-			freeze_thr_state = 0;
+			freeze_thr_state = Active;
 			mutexUnlock(&freezeMutex); // stupid but it works so is it really stupid? (yes)
 			freezecount = 0;
 			wait_su = false;
 			goto IDLE;
-		}
+		} 
+        else if (*(FreezeThreadState*)arg == Pause)
+        {
+            svcSleepThread(1e+8L); //1s
+            continue;
+        }
 		
 		mutexLock(&freezeMutex);
 		attach();
