@@ -181,7 +181,7 @@ int argmain(int argc, char **argv)
         peek(meta.main_nso_base + offset, size);
     }
 
-    //poke <address in hex or dec> <amount of bytes in hex or dec> <data in hex or dec>
+    //poke <address in hex or dec> <data in hex or dec>
     if (!strcmp(argv[0], "poke"))
     {
         if(argc != 3)
@@ -402,7 +402,7 @@ int argmain(int argc, char **argv)
 		printf("%016lX\n", solved);
 	}
 
-    // pointerPeek <read size> <first (main) jump> <additional jumps> <final jump in pointerexpr>
+    // pointerPeek <amount of bytes in hex or dec> <first (main) jump> <additional jumps> <final jump in pointerexpr>
     if (!strcmp(argv[0], "pointerPeek"))
 	{
 		if(argc < 3)
@@ -417,6 +417,26 @@ int argmain(int argc, char **argv)
 		u64 solved = followMainPointer(jumps, count);
         solved += finalJump;
         peek(solved, size);
+	}
+
+    // pointerPoke <data to be sent> <first (main) jump> <additional jumps> <final jump in pointerexpr>
+    if (!strcmp(argv[0], "pointerPoke"))
+	{
+		if(argc < 3)
+            return 0;
+            
+        u64 finalJump = parseStringToSignedLong(argv[argc-1]);
+        u64 count = argc - 3;
+		s64 jumps[count];
+		for (int i = 2; i < argc-1; i++)
+			jumps[i-2] = parseStringToSignedLong(argv[i]);
+		u64 solved = followMainPointer(jumps, count);
+        solved += finalJump;
+
+		u64 size;
+        u8* data = parseStringToByteBuffer(argv[1], &size);
+        poke(solved, size, data);
+        free(data);
 	}
 	
 	// add to freeze map
