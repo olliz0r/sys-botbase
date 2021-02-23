@@ -402,10 +402,26 @@ int argmain(int argc, char **argv)
 		printf("%016lX\n", solved);
 	}
 
+    // pointerAll <first (main) jump> <additional jumps> <final jump in pointerexpr> 
+    // possibly redundant between the one above, one needs to go eventually. (little endian, flip it yourself if required)
+	if (!strcmp(argv[0], "pointerAll"))
+	{
+		if(argc < 3)
+            return 0;
+        u64 finalJump = parseStringToSignedLong(argv[argc-1]);
+        u64 count = argc - 2;
+		s64 jumps[count];
+		for (int i = 1; i < argc-1; i++)
+			jumps[i-1] = parseStringToSignedLong(argv[i]);
+		u64 solved = followMainPointer(jumps, count);
+        solved += finalJump;
+		printf("%016lX\n", solved);
+	}
+
     // pointerPeek <amount of bytes in hex or dec> <first (main) jump> <additional jumps> <final jump in pointerexpr>
     if (!strcmp(argv[0], "pointerPeek"))
 	{
-		if(argc < 3)
+		if(argc < 4)
             return 0;
             
         u64 finalJump = parseStringToSignedLong(argv[argc-1]);
@@ -422,7 +438,7 @@ int argmain(int argc, char **argv)
     // pointerPoke <data to be sent> <first (main) jump> <additional jumps> <final jump in pointerexpr>
     if (!strcmp(argv[0], "pointerPoke"))
 	{
-		if(argc < 3)
+		if(argc < 4)
             return 0;
             
         u64 finalJump = parseStringToSignedLong(argv[argc-1]);
