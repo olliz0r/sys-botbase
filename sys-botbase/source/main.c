@@ -791,7 +791,7 @@ void sub_freeze(void *arg)
 			freezecount = 0;
 			wait_su = false;
 			goto IDLE;
-		} 
+		}
         else if (*(FreezeThreadState*)arg == Pause)
         {
             svcSleepThread(1e+8L); //1s
