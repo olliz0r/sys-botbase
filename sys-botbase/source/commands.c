@@ -1,4 +1,5 @@
 #include <switch.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,16 +7,19 @@
 #include "commands.h"
 #include "util.h"
 
-Mutex actionLock;
-
 //Controller:
 bool bControllerIsInitialised = false;
 HiddbgHdlsHandle controllerHandle = {0};
 HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
 
+//Keyboard:
+HiddbgKeyboardAutoPilotState dummyKeyboardState = {0};
+
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
+u64 keyPressSleepTime = 25;
+u64 pollRate = 17; // polling is linked to screen refresh rate (system UI) or game framerate. Most cases this is 1/60 or 1/30
 u32 fingerDiameter = 50;
 
 void attach()
@@ -142,27 +146,31 @@ void initController()
     rc = hiddbgAttachHdlsVirtualDevice(&controllerHandle, &controllerDevice);
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgAttachHdlsVirtualDevice: %d\n", rc);
+    //init a dummy keyboard state for assignment between keypresses
+    dummyKeyboardState.keys[3] = 0x800000000000000UL; // Hackfix found by Red: an unused key press (KBD_MEDIA_CALC) is required to allow sequential same-key presses. bitfield[3]
     bControllerIsInitialised = true;
 }
-
 
 
 void poke(u64 offset, u64 size, u8* val)
 {
     attach();
-    Result rc = svcWriteDebugProcessMemory(debughandle, val, offset, size);
+    writeMem(offset, size, val);
+    detach();
+}
+
+void writeMem(u64 offset, u64 size, u8* val)
+{
+	Result rc = svcWriteDebugProcessMemory(debughandle, val, offset, size);
     if (R_FAILED(rc) && debugResultCodes)
         printf("svcWriteDebugProcessMemory: %d\n", rc);
-    detach();
 }
 
 void peek(u64 offset, u64 size)
 {
     u8 *out = malloc(sizeof(u8) * size);
     attach();
-    Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("svcReadDebugProcessMemory: %d\n", rc);
+    readMem(out, offset, size);
     detach();
 
     u64 i;
@@ -172,6 +180,13 @@ void peek(u64 offset, u64 size)
     }
     printf("\n");
     free(out);
+}
+
+void readMem(u8* out, u64 offset, u64 size)
+{
+	Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("svcReadDebugProcessMemory: %d\n", rc);
 }
 
 void click(HidControllerKeys btn)
@@ -211,10 +226,45 @@ void setStickState(int side, int dxVal, int dyVal)
     hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
+void reverseArray(u8* arr, int start, int end)
+{
+    int temp;
+    while (start < end)
+    {
+        temp = arr[start];   
+        arr[start] = arr[end];
+        arr[end] = temp;
+        start++;
+        end--;
+    }   
+} 
+
+u64 followMainPointer(s64* jumps, size_t count) 
+{
+	u64 offset;
+    u64 size = sizeof offset;
+	u8 *out = malloc(size);
+	MetaData meta = getMetaData(); 
+	
+	attach();
+	readMem(out, meta.main_nso_base + jumps[0], size);
+	offset = *(u64*)out;
+	int i;
+    for (i = 1; i < count; ++i)
+	{
+		readMem(out, offset + jumps[i], size);
+		offset = *(u64*)out;
+	}
+	detach();
+	free(out);
+	
+    return offset;
+}
+
 void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
 {
     initController();
-    state->delta_time = holdTime;
+    state->delta_time = holdTime; // only the first touch needs this for whatever reason
     for (u32 i = 0; i < sequentialCount; i++)
     {
         hiddbgSetTouchScreenAutoPilotState(&state[i], 1);
@@ -222,15 +272,45 @@ void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
         if (!hold)
         {
             hiddbgSetTouchScreenAutoPilotState(NULL, 0);
-            svcSleepThread(TOUCHPOLLMIN);
+            svcSleepThread(pollRate * 1e+6L);
         }
     }
 
     if(hold) // send finger release event
     {
         hiddbgSetTouchScreenAutoPilotState(NULL, 0);
-        svcSleepThread(TOUCHPOLLMIN);
+        svcSleepThread(pollRate * 1e+6L);
     }
     
     hiddbgUnsetTouchScreenAutoPilotState();
+}
+
+void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
+{
+    initController();
+    HiddbgKeyboardAutoPilotState tempState = {0};
+    u32 i;
+    for (i = 0; i < sequentialCount; i++)
+    {
+        memcpy(&tempState.keys, states[i].keys, sizeof(u64) * 4);
+        tempState.modifiers = states[i].modifiers;
+        hiddbgSetKeyboardAutoPilotState(&tempState);
+        svcSleepThread(keyPressSleepTime * 1e+6L);
+
+        if (i != (sequentialCount-1))
+        {
+            if (memcmp(states[i].keys, states[i+1].keys, sizeof(u64) * 4) == 0 && states[i].modifiers == states[i+1].modifiers)
+            {
+                hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
+                svcSleepThread(pollRate * 1e+6L);
+            }
+        }
+        else
+        {
+            hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
+            svcSleepThread(pollRate * 1e+6L);
+        }
+    }
+
+    hiddbgUnsetKeyboardAutoPilotState();
 }

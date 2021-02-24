@@ -1,0 +1,23 @@
+{
+    "configurations": [
+      {
+        "name": "DKP aarch64",
+        "includePath": [
+          "C:/devkitPro/devkitA64/aarch64-none-elf/include/**",
+          "C:/devkitPro/devkitA64/lib/gcc/aarch64-none-elf/10.2.0/include/**",
+          "C:/devkitPro/libnx/include/**",
+          "C:/devkitPro/portlibs/switch/include/**"
+        ],
+        "defines": [
+          "SWITCH",
+          "__SWITCH__",
+          "DEBUG"
+        ],
+        "compilerPath": "C:/devkitPro/devkitA64/bin/aarch64-none-elf-g++",
+        "cStandard": "c11",
+        "cppStandard": "c++17",
+        "intelliSenseMode": "gcc-arm64"
+      }
+    ],
+    "version": 4
+  }
