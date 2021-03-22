@@ -261,7 +261,7 @@ u64 followMainPointer(s64* jumps, size_t count)
     return offset;
 }
 
-void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
+void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold, u8* token)
 {
     initController();
     state->delta_time = holdTime; // only the first touch needs this for whatever reason
@@ -274,6 +274,9 @@ void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
             hiddbgSetTouchScreenAutoPilotState(NULL, 0);
             svcSleepThread(pollRate * 1e+6L);
         }
+
+        if ((*token) == 1)
+            break;
     }
 
     if(hold) // send finger release event

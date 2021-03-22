@@ -41,6 +41,9 @@ FreezeThreadState freeze_thr_state = Active;
 KeyData currentKeyEvent = {0};
 TouchData currentTouchEvent = {0};
 
+// for cancelling the touch thread
+u8 touchToken = 0;
+
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
 
@@ -549,6 +552,9 @@ int argmain(int argc, char **argv)
         makeTouch(state, count, pollRate * 1e+6L * 2, true);
 	}
 
+    if (!strcmp(argv[0], "touchCancel"))
+        touchToken = 1;
+
     //key followed by arrayof: <HidKeyboardKey> to be pressed in sequential order
     //thank you Red (hp3721) for this functionality
     if (!strcmp(argv[0], "key"))
@@ -847,16 +853,18 @@ void sub_touch(void *arg)
     while (1)
     {
         TouchData* touchPtr = (TouchData*)arg;
-        if (touchPtr->state == 1)
+        if (touchPtr->state == 1 && touchToken == 0)
         {
             mutexLock(&touchMutex); // don't allow any more assignments to the touch var (will lock the main thread)
-            touch(touchPtr->states, touchPtr->sequentialCount, touchPtr->holdTime, touchPtr->hold);
+            touch(touchPtr->states, touchPtr->sequentialCount, touchPtr->holdTime, touchPtr->hold, &touchToken);
             free(touchPtr->states);
             touchPtr->state = 0;
             mutexUnlock(&touchMutex);
         }
 
         svcSleepThread(1e+6L);
+        
+        touchToken = 0;
 
         if (touchPtr->state == 3)
             break;
