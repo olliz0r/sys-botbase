@@ -160,7 +160,7 @@ HidControllerKeys parseStringToButton(char* arg)
     {
         return KEY_DRIGHT;
     }
-    else if (strcmp(arg, "DDOWN") == 0)
+    else if (strcmp(arg, "DDOWN") == 0 || strcmp(arg, "DD") == 0)
     {
         return KEY_DDOWN;
     }

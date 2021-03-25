@@ -317,3 +317,33 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
 
     hiddbgUnsetKeyboardAutoPilotState();
 }
+
+void clickSequence(char* seq)
+{
+    char delim = ',';
+    char startWait = 'W';
+    char* command = strtok(seq, &delim);
+    HidControllerKeys currKey = {0};
+    u64 currentWait = 0;
+
+    initController();
+    while (command != NULL)
+    {
+        if (!strncmp(command, &startWait, 1))
+        {
+            // wait
+            currentWait = parseStringToInt(&command[1]);
+            svcSleepThread(currentWait * 1e+6l);
+        }
+        else
+        {
+            currKey = parseStringToButton(command);
+            press(currKey);
+            svcSleepThread(buttonClickSleepTime * 1e+6L);
+            release(currKey);
+        }
+
+        command = strtok(NULL, &delim);
+    }
+    
+}

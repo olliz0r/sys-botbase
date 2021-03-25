@@ -25,21 +25,24 @@ typedef enum {
     Pause = 3
 } FreezeThreadState;
 
-Thread freezeThread, touchThread, keyboardThread;
+Thread freezeThread, touchThread, keyboardThread, clickThread;
 
 // prototype thread functions to give the illusion of cleanliness
 void sub_freeze(void *arg);
 void sub_touch(void *arg);
 void sub_key(void *arg);
+void sub_click(void *arg);
 
 // locks for thread
-Mutex freezeMutex, touchMutex, keyMutex;
+Mutex freezeMutex, touchMutex, keyMutex, clickMutex;
 
 // events for releasing or idling threads
 FreezeThreadState freeze_thr_state = Active; 
+u8 clickThreadState = 0;
 // key and touch events currently being processed
 KeyData currentKeyEvent = {0};
 TouchData currentTouchEvent = {0};
+char* currentClick = NULL;
 
 // for cancelling the touch thread
 u8 touchToken = 0;
@@ -143,6 +146,13 @@ void makeKeys(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
     mutexUnlock(&keyMutex);
 }
 
+void makeClickSeq(char* seq)
+{
+    mutexLock(&clickMutex);
+    currentClick = seq;
+    mutexUnlock(&clickMutex);
+}
+
 int argmain(int argc, char **argv)
 {
     if (argc == 0)
@@ -232,6 +242,18 @@ int argmain(int argc, char **argv)
             return 0;
         HidControllerKeys key = parseStringToButton(argv[1]);
         click(key);
+    }
+
+    //clickSeq <sequence> eg clickSeq A,W1000,B,W200,DUP,W500
+    if (!strcmp(argv[0], "clickSeq"))
+    {
+        if(argc != 2)
+            return 0;
+        
+        u64 sizeArg = strlen(argv[1]) + 1;
+        char* seqNew = malloc(sizeArg);
+        strcpy(seqNew, argv[1]);
+        makeClickSeq(seqNew);
     }
 
     //hold <buttontype>
@@ -389,7 +411,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.7\n");
+        printf("1.71\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -682,6 +704,12 @@ int main()
     rc = threadCreate(&keyboardThread, sub_key, (void*)&currentKeyEvent, NULL, THREAD_SIZE, 0x2C, -2); 
     if (R_SUCCEEDED(rc))
         rc = threadStart(&keyboardThread);
+
+    // click sequence thread
+    mutexInit(&clickMutex);
+    rc = threadCreate(&clickThread, sub_click, (void*)currentClick, NULL, THREAD_SIZE, 0x2C, -2); 
+    if (R_SUCCEEDED(rc))
+        rc = threadStart(&clickThread);
     
 	
     while (appletMainLoop())
@@ -758,6 +786,8 @@ int main()
         currentKeyEvent.state = 3;
         threadWaitForExit(&keyboardThread);
         threadClose(&keyboardThread);
+        clickThreadState = 1;
+        threadWaitForExit(&clickThread);
 	}
 	
 	clearFreezes();
@@ -889,5 +919,25 @@ void sub_key(void *arg)
 
         if (keyPtr->state == 3)
             break;
+    }
+}
+
+void sub_click(void *arg)
+{
+    while (1)
+    {
+        if (clickThreadState == 1)
+            break;
+
+        if (currentClick != NULL)
+        {
+            mutexLock(&clickMutex);
+            clickSequence(currentClick);
+            free(currentClick); currentClick = NULL;
+            mutexUnlock(&clickMutex);
+            printf("done\n");
+        }
+
+        svcSleepThread(1e+6L);
     }
 }

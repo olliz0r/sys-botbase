@@ -52,3 +52,4 @@ void reverseArray(u8* arr, int start, int end);
 u64 followMainPointer(s64* jumps, size_t count);
 void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold, u8* token);
 void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount);
+void clickSequence(char* seq);
