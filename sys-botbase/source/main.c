@@ -44,8 +44,9 @@ KeyData currentKeyEvent = {0};
 TouchData currentTouchEvent = {0};
 char* currentClick = NULL;
 
-// for cancelling the touch thread
+// for cancelling the touch/click thread
 u8 touchToken = 0;
+u8 clickToken = 0;
 
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
@@ -255,6 +256,9 @@ int argmain(int argc, char **argv)
         strcpy(seqNew, argv[1]);
         makeClickSeq(seqNew);
     }
+
+    if (!strcmp(argv[0], "clickCancel"))
+        clickToken = 1;
 
     //hold <buttontype>
     if (!strcmp(argv[0], "press"))
@@ -883,7 +887,7 @@ void sub_touch(void *arg)
     while (1)
     {
         TouchData* touchPtr = (TouchData*)arg;
-        if (touchPtr->state == 1 && touchToken == 0)
+        if (touchPtr->state == 1)
         {
             mutexLock(&touchMutex); // don't allow any more assignments to the touch var (will lock the main thread)
             touch(touchPtr->states, touchPtr->sequentialCount, touchPtr->holdTime, touchPtr->hold, &touchToken);
@@ -932,11 +936,13 @@ void sub_click(void *arg)
         if (currentClick != NULL)
         {
             mutexLock(&clickMutex);
-            clickSequence(currentClick);
+            clickSequence(currentClick, &clickToken);
             free(currentClick); currentClick = NULL;
             mutexUnlock(&clickMutex);
             printf("done\n");
         }
+
+        clickToken = 0;
 
         svcSleepThread(1e+6L);
     }

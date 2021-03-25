@@ -318,7 +318,7 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
     hiddbgUnsetKeyboardAutoPilotState();
 }
 
-void clickSequence(char* seq)
+void clickSequence(char* seq, u8* token)
 {
     char delim = ',';
     char startWait = 'W';
@@ -329,6 +329,9 @@ void clickSequence(char* seq)
     initController();
     while (command != NULL)
     {
+        if ((*token) == 1)
+            break;
+            
         if (!strncmp(command, &startWait, 1))
         {
             // wait
