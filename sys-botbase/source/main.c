@@ -415,7 +415,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.71\n");
+        printf("1.72\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -642,6 +642,24 @@ int argmain(int argc, char **argv)
         }
 
         makeKeys(keystate, 1);
+    }
+
+    //turns off the screen (display)
+    if (!strcmp(argv[0], "screenOff"))
+	{
+        ViDisplay temp_display;
+        Result rc = viOpenDefaultDisplay(&temp_display);
+        if (R_SUCCEEDED(rc))
+            viSetDisplayPowerState(&temp_display, ViPowerState_Off);
+    }
+
+    //turns on the screen (display)
+    if (!strcmp(argv[0], "screenOn"))
+	{
+        ViDisplay temp_display;
+        Result rc = viOpenDefaultDisplay(&temp_display);
+        if (R_SUCCEEDED(rc))
+            viSetDisplayPowerState(&temp_display, ViPowerState_On);
     }
 
     return 0;
