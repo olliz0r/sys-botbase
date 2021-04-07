@@ -348,5 +348,4 @@ void clickSequence(char* seq, u8* token)
 
         command = strtok(NULL, &delim);
     }
-    
 }

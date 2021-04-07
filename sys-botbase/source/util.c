@@ -8,6 +8,28 @@
 #include <switch.h>
 #include "util.h"
 
+// taken from sys-httpd (thanks jolan!)
+static const HidsysNotificationLedPattern breathingpattern = {
+    .baseMiniCycleDuration = 0x8, // 100ms.
+    .totalMiniCycles = 0x2,       // 3 mini cycles. Last one 12.5ms.
+    .totalFullCycles = 0x2,       // 2 full cycles.
+    .startIntensity = 0x2,        // 13%.
+    .miniCycles = {
+        // First cycle
+        {
+            .ledIntensity = 0xF,      // 100%.
+            .transitionSteps = 0xF,   // 15 steps. Transition time 1.5s.
+            .finalStepDuration = 0x0, // 12.5ms.
+        },
+        // Second cycle
+        {
+            .ledIntensity = 0x2,      // 13%.
+            .transitionSteps = 0xF,   // 15 steps. Transition time 1.5s.
+            .finalStepDuration = 0x0, // 12.5ms.
+        },
+    },
+};
+
 int setupServerSocket()
 {
     int lissock;
@@ -184,4 +206,22 @@ Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {
         .buffer_attrs = {SfBufferAttr_HipcMapTransferAllowsNonSecure | SfBufferAttr_HipcMapAlias | SfBufferAttr_Out},
         .buffers = { { buffer, buffer_size } },
     );
+}
+
+static void sendPatternStatic(const HidsysNotificationLedPattern* pattern)
+{
+    s32 total_entries;
+    HidsysUniquePadId unique_pad_ids[2]={0};
+
+    Result rc = hidsysGetUniquePadsFromNpad(HidNpadIdType_Handheld, unique_pad_ids, 2, &total_entries);
+    if (R_FAILED(rc))
+        return; // probably incompatible or no pads connected
+
+    for (int i = 0; i < total_entries; i++)
+        rc = hidsysSetNotificationLedPattern(pattern, unique_pad_ids[i]);
+}
+
+void flashLed()
+{
+    sendPatternStatic(&breathingpattern);
 }
