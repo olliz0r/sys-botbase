@@ -682,6 +682,13 @@ int argmain(int argc, char **argv)
             viCloseDisplay(&temp_display);
         }
     }
+    
+    if (!strcmp(argv[0], "charge"))
+	{
+        u32 charge;
+        psmGetBatteryChargePercentage(&charge);
+        printf("%d\n", charge);
+    }
 
     return 0;
 }
