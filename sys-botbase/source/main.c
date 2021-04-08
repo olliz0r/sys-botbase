@@ -657,7 +657,9 @@ int argmain(int argc, char **argv)
     if (!strcmp(argv[0], "screenOff"))
 	{
         ViDisplay temp_display;
-        Result rc = viOpenDefaultDisplay(&temp_display);
+        Result rc = viOpenDisplay("Internal", &temp_display);
+        if (R_FAILED(rc))
+            rc = viOpenDefaultDisplay(&temp_display);
         if (R_SUCCEEDED(rc))
         {
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_NotScanning); // not scanning keeps the screen on but does not push new pixels to the display. Battery save is non-negligible and should be used where possible
@@ -670,7 +672,9 @@ int argmain(int argc, char **argv)
     if (!strcmp(argv[0], "screenOn"))
 	{
         ViDisplay temp_display;
-        Result rc = viOpenDefaultDisplay(&temp_display);
+        Result rc = viOpenDisplay("Internal", &temp_display);
+        if (R_FAILED(rc))
+            rc = viOpenDefaultDisplay(&temp_display);
         if (R_SUCCEEDED(rc))
         {
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_On);
