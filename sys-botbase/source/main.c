@@ -760,6 +760,8 @@ int main()
     rc = threadCreate(&clickThread, sub_click, (void*)currentClick, NULL, THREAD_SIZE, 0x2C, -2); 
     if (R_SUCCEEDED(rc))
         {rc = threadStart(&clickThread);} // curly brackets remove compiler warning
+    
+	flashLed();
 
     while (appletMainLoop())
     {
