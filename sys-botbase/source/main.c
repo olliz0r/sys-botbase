@@ -90,21 +90,27 @@ void __appInit(void)
     if (R_FAILED(rc))
         fatalThrow(rc);
     rc = pmdmntInitialize();
-	if (R_FAILED(rc)) {
+	if (R_FAILED(rc)) 
         fatalThrow(rc);
-	}
     rc = ldrDmntInitialize();
-	if (R_FAILED(rc)) {
+	if (R_FAILED(rc)) 
 		fatalThrow(rc);
-	}
     rc = pminfoInitialize();
-	if (R_FAILED(rc)) {
+	if (R_FAILED(rc)) 
 		fatalThrow(rc);
-	}
     rc = socketInitializeDefault();
     if (R_FAILED(rc))
         fatalThrow(rc);
     rc = capsscInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+    rc = viInitialize(ViServiceType_Default);
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+    rc = psmInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+    rc = hidsysInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
 }
@@ -117,6 +123,9 @@ void __appExit(void)
     audoutExit();
     timeExit();
     socketExit();
+    viExit();
+    psmExit();
+    hidsysExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -245,7 +254,7 @@ int argmain(int argc, char **argv)
         click(key);
     }
 
-    //clickSeq <sequence> eg clickSeq A,W1000,B,W200,DUP,W500
+    //clickSeq <sequence> eg clickSeq A,W1000,B,W200,DUP,W500,DD,W350 (some params don't parse correctly, such as DDOWN so use the alt)
     if (!strcmp(argv[0], "clickSeq"))
     {
         if(argc != 2)
@@ -415,7 +424,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.72\n");
+        printf("1.73\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -650,7 +659,11 @@ int argmain(int argc, char **argv)
         ViDisplay temp_display;
         Result rc = viOpenDefaultDisplay(&temp_display);
         if (R_SUCCEEDED(rc))
-            viSetDisplayPowerState(&temp_display, ViPowerState_Off);
+        {
+            rc = viSetDisplayPowerState(&temp_display, ViPowerState_NotScanning); // not scanning keeps the screen on but does not push new pixels to the display. Battery save is non-negligible and should be used where possible
+            svcSleepThread(1e+6l);
+            viCloseDisplay(&temp_display);
+        }
     }
 
     //turns on the screen (display)
@@ -659,7 +672,11 @@ int argmain(int argc, char **argv)
         ViDisplay temp_display;
         Result rc = viOpenDefaultDisplay(&temp_display);
         if (R_SUCCEEDED(rc))
-            viSetDisplayPowerState(&temp_display, ViPowerState_On);
+        {
+            rc = viSetDisplayPowerState(&temp_display, ViPowerState_On);
+            svcSleepThread(1e+6l);
+            viCloseDisplay(&temp_display);
+        }
     }
 
     return 0;
@@ -731,9 +748,8 @@ int main()
     mutexInit(&clickMutex);
     rc = threadCreate(&clickThread, sub_click, (void*)currentClick, NULL, THREAD_SIZE, 0x2C, -2); 
     if (R_SUCCEEDED(rc))
-        rc = threadStart(&clickThread);
-    
-	
+        {rc = threadStart(&clickThread);} // curly brackets remove compiler warning
+
     while (appletMainLoop())
     {
         poll(pfds, fd_count, -1);
