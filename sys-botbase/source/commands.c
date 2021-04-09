@@ -340,20 +340,28 @@ void clickSequence(char* seq, u8* token)
         {
             // l stick
             s64 x = parseStringToSignedLong(&command[1]);
+            if(x > JOYSTICK_MAX) x = JOYSTICK_MAX; 
+            if(x < JOYSTICK_MIN) x = JOYSTICK_MIN; 
             s64 y = 0;
             command = strtok(NULL, &delim);
             if (command != NULL)
                 y = parseStringToSignedLong(command);
+            if(y > JOYSTICK_MAX) y = JOYSTICK_MAX;
+            if(y < JOYSTICK_MIN) y = JOYSTICK_MIN;
             setStickState(JOYSTICK_LEFT, (s32)x, (s32)y);
         }
         else if (!strncmp(command, &startRStick, 1))
         {
             // r stick
             s64 x = parseStringToSignedLong(&command[1]);
+            if(x > JOYSTICK_MAX) x = JOYSTICK_MAX; 
+            if(x < JOYSTICK_MIN) x = JOYSTICK_MIN; 
             s64 y = 0;
             command = strtok(NULL, &delim);
             if (command != NULL)
                 y = parseStringToSignedLong(command);
+            if(y > JOYSTICK_MAX) y = JOYSTICK_MAX;
+            if(y < JOYSTICK_MIN) y = JOYSTICK_MIN;
             setStickState(JOYSTICK_RIGHT, (s32)x, (s32)y);
         }
         else if (!strncmp(command, &startPress, 1))
