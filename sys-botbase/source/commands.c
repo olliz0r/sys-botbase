@@ -320,8 +320,10 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
 
 void clickSequence(char* seq, u8* token)
 {
-    char delim = ',';
-    char startWait = 'W';
+    const char delim = ',';
+    const char startWait = 'W';
+    const char startPress = '+';
+    const char startRelease = '-';
     char* command = strtok(seq, &delim);
     HidControllerKeys currKey = {0};
     u64 currentWait = 0;
@@ -331,8 +333,20 @@ void clickSequence(char* seq, u8* token)
     {
         if ((*token) == 1)
             break;
-            
-        if (!strncmp(command, &startWait, 1))
+
+        if (!strncmp(command, &startPress, 1))
+        {
+            // press
+            currKey = parseStringToButton(&command[1]);
+            press(currKey);
+        }  
+        if (!strncmp(command, &startRelease, 1))
+        {
+            // release
+            currKey = parseStringToButton(&command[1]);
+            press(currKey);
+        }   
+        else if (!strncmp(command, &startWait, 1))
         {
             // wait
             currentWait = parseStringToInt(&command[1]);
