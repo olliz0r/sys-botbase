@@ -254,7 +254,8 @@ int argmain(int argc, char **argv)
         click(key);
     }
 
-    //clickSeq <sequence> eg clickSeq A,W1000,B,W200,DUP,W500,DD,W350 (some params don't parse correctly, such as DDOWN so use the alt)
+    //clickSeq <sequence> eg clickSeq A,W1000,B,W200,DUP,W500,DD,W350,%5000,1500,W2650,%0,0 (some params don't parse correctly, such as DDOWN so use the alt)
+    //syntax: <button>=click, 'W<number>'=wait/sleep thread, '+<button>'=press button, '-<button>'=release button, '%<x axis>,<y axis>'=move L stick <x axis, y axis>, '&<x axis>,<y axis>'=move R stick <x axis, y axis> 
     if (!strcmp(argv[0], "clickSeq"))
     {
         if(argc != 2)

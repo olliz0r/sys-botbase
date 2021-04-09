@@ -320,10 +320,12 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
 
 void clickSequence(char* seq, u8* token)
 {
-    const char delim = ',';
+    const char delim = ','; // used for chars and sticks
     const char startWait = 'W';
     const char startPress = '+';
     const char startRelease = '-';
+    const char startLStick = '%';
+    const char startRStick = '&';
     char* command = strtok(seq, &delim);
     HidControllerKeys currKey = {0};
     u64 currentWait = 0;
@@ -334,13 +336,33 @@ void clickSequence(char* seq, u8* token)
         if ((*token) == 1)
             break;
 
-        if (!strncmp(command, &startPress, 1))
+        if (!strncmp(command, &startLStick, 1))
+        {
+            // l stick
+            s64 x = parseStringToSignedLong(&command[1]);
+            s64 y = 0;
+            command = strtok(NULL, &delim);
+            if (command != NULL)
+                y = parseStringToSignedLong(command);
+            setStickState(JOYSTICK_LEFT, (s32)x, (s32)y);
+        }
+        else if (!strncmp(command, &startRStick, 1))
+        {
+            // r stick
+            s64 x = parseStringToSignedLong(&command[1]);
+            s64 y = 0;
+            command = strtok(NULL, &delim);
+            if (command != NULL)
+                y = parseStringToSignedLong(command);
+            setStickState(JOYSTICK_RIGHT, (s32)x, (s32)y);
+        }
+        else if (!strncmp(command, &startPress, 1))
         {
             // press
             currKey = parseStringToButton(&command[1]);
             press(currKey);
         }  
-        if (!strncmp(command, &startRelease, 1))
+        else if (!strncmp(command, &startRelease, 1))
         {
             // release
             currKey = parseStringToButton(&command[1]);
@@ -354,6 +376,7 @@ void clickSequence(char* seq, u8* token)
         }
         else
         {
+            // click
             currKey = parseStringToButton(command);
             press(currKey);
             svcSleepThread(buttonClickSleepTime * 1e+6L);
