@@ -120,81 +120,82 @@ u8* parseStringToByteBuffer(char* arg, u64* size)
     return buffer;
 }
 
-HidControllerKeys parseStringToButton(char* arg)
+HidNpadButton parseStringToButton(char* arg)
 {
     if (strcmp(arg, "A") == 0)
     {
-        return KEY_A;
+        return HidNpadButton_A;
     } 
     else if (strcmp(arg, "B") == 0)
     {
-        return KEY_B;
+        return HidNpadButton_B;
     }
     else if (strcmp(arg, "X") == 0)
     {
-        return KEY_X;
+        return HidNpadButton_X;
     }
     else if (strcmp(arg, "Y") == 0)
     {
-        return KEY_Y;
+        return HidNpadButton_Y;
     }
     else if (strcmp(arg, "RSTICK") == 0)
     {
-        return KEY_RSTICK;
+        return HidNpadButton_StickR;
     }
     else if (strcmp(arg, "LSTICK") == 0)
     {
-        return KEY_LSTICK;
+        return HidNpadButton_StickL;
     }
     else if (strcmp(arg, "L") == 0)
     {
-        return KEY_L;
+        return HidNpadButton_L;
     }
     else if (strcmp(arg, "R") == 0)
     {
-        return KEY_R;
+        return HidNpadButton_R;
     }
     else if (strcmp(arg, "ZL") == 0)
     {
-        return KEY_ZL;
+        return HidNpadButton_ZL;
     }
     else if (strcmp(arg, "ZR") == 0)
     {
-        return KEY_ZR;
+        return HidNpadButton_ZR;
     }
     else if (strcmp(arg, "PLUS") == 0)
     {
-        return KEY_PLUS;
+        return HidNpadButton_Plus;
     }
     else if (strcmp(arg, "MINUS") == 0)
     {
-        return KEY_MINUS;
+        return HidNpadButton_Minus;
     }
     else if (strcmp(arg, "DLEFT") == 0)
     {
-        return KEY_DLEFT;
+        return HidNpadButton_Left;
     }
     else if (strcmp(arg, "DUP") == 0)
     {
-        return KEY_DUP;
+        return HidNpadButton_Up;
     }
     else if (strcmp(arg, "DRIGHT") == 0)
     {
-        return KEY_DRIGHT;
+        return HidNpadButton_Right;
     }
     else if (strcmp(arg, "DDOWN") == 0 || strcmp(arg, "DD") == 0)
     {
-        return KEY_DDOWN;
+        return HidNpadButton_Down;
     }
     else if (strcmp(arg, "HOME") == 0)
     {
-        return KEY_HOME;
+        return HiddbgNpadButton_Home;
     }
     else if (strcmp(arg, "CAPTURE") == 0)
     {
-        return KEY_CAPTURE;
+        return HiddbgNpadButton_Capture;
     }
-    return KEY_A; //I guess lol
+    
+    return HidNpadButton_A; //I guess lol
 }
 
 Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {

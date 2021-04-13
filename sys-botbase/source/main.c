@@ -250,7 +250,7 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-        HidControllerKeys key = parseStringToButton(argv[1]);
+        HidNpadButton key = parseStringToButton(argv[1]);
         click(key);
     }
 
@@ -275,7 +275,7 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-        HidControllerKeys key = parseStringToButton(argv[1]);
+        HidNpadButton key = parseStringToButton(argv[1]);
         press(key);
     }
 
@@ -284,7 +284,7 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-        HidControllerKeys key = parseStringToButton(argv[1]);
+        HidNpadButton key = parseStringToButton(argv[1]);
         release(key);
     }
 

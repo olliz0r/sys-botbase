@@ -11,7 +11,7 @@
 bool bControllerIsInitialised = false;
 HiddbgHdlsHandle controllerHandle = {0};
 HiddbgHdlsDeviceInfo controllerDevice = {0};
-HiddbgHdlsState controllerState = {0};
+HiddbgHdlsStateV12 controllerState = {0};
 
 //Keyboard:
 HiddbgKeyboardAutoPilotState dummyKeyboardState = {0};
@@ -189,25 +189,29 @@ void readMem(u8* out, u64 offset, u64 size)
         printf("svcReadDebugProcessMemory: %d\n", rc);
 }
 
-void click(HidControllerKeys btn)
+void click(HidNpadButton btn)
 {
     initController();
     press(btn);
     svcSleepThread(buttonClickSleepTime * 1e+6L);
     release(btn);
 }
-void press(HidControllerKeys btn)
+void press(HidNpadButton btn)
 {
     initController();
     controllerState.buttons |= btn;
-    hiddbgSetHdlsState(controllerHandle, &controllerState);
+    Result rc = hiddbgSetHdlsStateV12Unsafe(controllerHandle, &controllerState);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgSetHdlsState: %d\n", rc);
 }
 
-void release(HidControllerKeys btn)
+void release(HidNpadButton btn)
 {
     initController();
     controllerState.buttons &= ~btn;
-    hiddbgSetHdlsState(controllerHandle, &controllerState);
+    Result rc = hiddbgSetHdlsStateV12Unsafe(controllerHandle, &controllerState);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgSetHdlsState: %d\n", rc);
 }
 
 void setStickState(int side, int dxVal, int dyVal)
@@ -223,7 +227,7 @@ void setStickState(int side, int dxVal, int dyVal)
 		controllerState.analog_stick_r.x = dxVal;
 		controllerState.analog_stick_r.y = dyVal;
 	}
-    hiddbgSetHdlsState(controllerHandle, &controllerState);
+    hiddbgSetHdlsStateV12Unsafe(controllerHandle, &controllerState);
 }
 
 void reverseArray(u8* arr, int start, int end)
@@ -327,7 +331,7 @@ void clickSequence(char* seq, u8* token)
     const char startLStick = '%';
     const char startRStick = '&';
     char* command = strtok(seq, &delim);
-    HidControllerKeys currKey = {0};
+    HidNpadButton currKey = {0};
     u64 currentWait = 0;
 
     initController();
