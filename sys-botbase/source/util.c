@@ -170,15 +170,15 @@ HidNpadButton parseStringToButton(char* arg)
     {
         return HidNpadButton_Minus;
     }
-    else if (strcmp(arg, "DLEFT") == 0)
+    else if (strcmp(arg, "DLEFT") == 0 || strcmp(arg, "DL") == 0)
     {
         return HidNpadButton_Left;
     }
-    else if (strcmp(arg, "DUP") == 0)
+    else if (strcmp(arg, "DUP") == 0 || strcmp(arg, "DU") == 0)
     {
         return HidNpadButton_Up;
     }
-    else if (strcmp(arg, "DRIGHT") == 0)
+    else if (strcmp(arg, "DRIGHT") == 0 || strcmp(arg, "DR") == 0)
     {
         return HidNpadButton_Right;
     }
