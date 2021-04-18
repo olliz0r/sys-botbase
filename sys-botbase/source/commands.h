@@ -4,7 +4,7 @@ extern Handle debughandle;
 extern bool bControllerIsInitialised;
 extern HiddbgHdlsHandle controllerHandle;
 extern HiddbgHdlsDeviceInfo controllerDevice;
-extern HiddbgHdlsStateV12 controllerState;
+extern HiddbgHdlsState controllerState;
 extern HiddbgKeyboardAutoPilotState dummyKeyboardState;
 extern u64 buttonClickSleepTime;
 extern u64 keyPressSleepTime;

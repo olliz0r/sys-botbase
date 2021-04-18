@@ -11,7 +11,7 @@
 bool bControllerIsInitialised = false;
 HiddbgHdlsHandle controllerHandle = {0};
 HiddbgHdlsDeviceInfo controllerDevice = {0};
-HiddbgHdlsStateV12 controllerState = {0};
+HiddbgHdlsState controllerState = {0};
 
 //Keyboard:
 HiddbgKeyboardAutoPilotState dummyKeyboardState = {0};
@@ -200,7 +200,7 @@ void press(HidNpadButton btn)
 {
     initController();
     controllerState.buttons |= btn;
-    Result rc = hiddbgSetHdlsStateV12Unsafe(controllerHandle, &controllerState);
+    Result rc = hiddbgSetHdlsState(controllerHandle, &controllerState);
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgSetHdlsState: %d\n", rc);
 }
@@ -209,7 +209,7 @@ void release(HidNpadButton btn)
 {
     initController();
     controllerState.buttons &= ~btn;
-    Result rc = hiddbgSetHdlsStateV12Unsafe(controllerHandle, &controllerState);
+    Result rc = hiddbgSetHdlsState(controllerHandle, &controllerState);
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgSetHdlsState: %d\n", rc);
 }
@@ -227,7 +227,7 @@ void setStickState(int side, int dxVal, int dyVal)
 		controllerState.analog_stick_r.x = dxVal;
 		controllerState.analog_stick_r.y = dyVal;
 	}
-    hiddbgSetHdlsStateV12Unsafe(controllerHandle, &controllerState);
+    hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
 void reverseArray(u8* arr, int start, int end)
