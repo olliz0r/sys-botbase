@@ -32,6 +32,9 @@ typedef struct {
     u8 state;
 } KeyData;
 
+#define JOYSTICK_LEFT 0
+#define JOYSTICK_RIGHT 1
+
 void attach();
 void detach();
 u64 getMainNsoBase(u64 pid);
@@ -44,11 +47,12 @@ void poke(u64 offset, u64 size, u8* val);
 void writeMem(u64 offset, u64 size, u8* val);
 void peek(u64 offset, u64 size);
 void readMem(u8* out, u64 offset, u64 size);
-void click(HidControllerKeys btn);
-void press(HidControllerKeys btn);
-void release(HidControllerKeys btn);
+void click(HidNpadButton btn);
+void press(HidNpadButton btn);
+void release(HidNpadButton btn);
 void setStickState(int side, int dxVal, int dyVal);
 void reverseArray(u8* arr, int start, int end);
 u64 followMainPointer(s64* jumps, size_t count);
-void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold);
+void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold, u8* token);
 void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount);
+void clickSequence(char* seq, u8* token);

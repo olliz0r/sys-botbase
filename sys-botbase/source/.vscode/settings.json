@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "switch.h": "c"
+        "switch.h": "c",
+        "cstring": "c"
     }
 }

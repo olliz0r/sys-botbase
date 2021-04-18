@@ -8,6 +8,28 @@
 #include <switch.h>
 #include "util.h"
 
+// taken from sys-httpd (thanks jolan!)
+static const HidsysNotificationLedPattern breathingpattern = {
+    .baseMiniCycleDuration = 0x8, // 100ms.
+    .totalMiniCycles = 0x2,       // 3 mini cycles. Last one 12.5ms.
+    .totalFullCycles = 0x2,       // 2 full cycles.
+    .startIntensity = 0x2,        // 13%.
+    .miniCycles = {
+        // First cycle
+        {
+            .ledIntensity = 0xF,      // 100%.
+            .transitionSteps = 0xF,   // 15 steps. Transition time 1.5s.
+            .finalStepDuration = 0x0, // 12.5ms.
+        },
+        // Second cycle
+        {
+            .ledIntensity = 0x2,      // 13%.
+            .transitionSteps = 0xF,   // 15 steps. Transition time 1.5s.
+            .finalStepDuration = 0x0, // 12.5ms.
+        },
+    },
+};
+
 int setupServerSocket()
 {
     int lissock;
@@ -98,81 +120,82 @@ u8* parseStringToByteBuffer(char* arg, u64* size)
     return buffer;
 }
 
-HidControllerKeys parseStringToButton(char* arg)
+HidNpadButton parseStringToButton(char* arg)
 {
     if (strcmp(arg, "A") == 0)
     {
-        return KEY_A;
+        return HidNpadButton_A;
     } 
     else if (strcmp(arg, "B") == 0)
     {
-        return KEY_B;
+        return HidNpadButton_B;
     }
     else if (strcmp(arg, "X") == 0)
     {
-        return KEY_X;
+        return HidNpadButton_X;
     }
     else if (strcmp(arg, "Y") == 0)
     {
-        return KEY_Y;
+        return HidNpadButton_Y;
     }
     else if (strcmp(arg, "RSTICK") == 0)
     {
-        return KEY_RSTICK;
+        return HidNpadButton_StickR;
     }
     else if (strcmp(arg, "LSTICK") == 0)
     {
-        return KEY_LSTICK;
+        return HidNpadButton_StickL;
     }
     else if (strcmp(arg, "L") == 0)
     {
-        return KEY_L;
+        return HidNpadButton_L;
     }
     else if (strcmp(arg, "R") == 0)
     {
-        return KEY_R;
+        return HidNpadButton_R;
     }
     else if (strcmp(arg, "ZL") == 0)
     {
-        return KEY_ZL;
+        return HidNpadButton_ZL;
     }
     else if (strcmp(arg, "ZR") == 0)
     {
-        return KEY_ZR;
+        return HidNpadButton_ZR;
     }
     else if (strcmp(arg, "PLUS") == 0)
     {
-        return KEY_PLUS;
+        return HidNpadButton_Plus;
     }
     else if (strcmp(arg, "MINUS") == 0)
     {
-        return KEY_MINUS;
+        return HidNpadButton_Minus;
     }
-    else if (strcmp(arg, "DLEFT") == 0)
+    else if (strcmp(arg, "DLEFT") == 0 || strcmp(arg, "DL") == 0)
     {
-        return KEY_DLEFT;
+        return HidNpadButton_Left;
     }
-    else if (strcmp(arg, "DUP") == 0)
+    else if (strcmp(arg, "DUP") == 0 || strcmp(arg, "DU") == 0)
     {
-        return KEY_DUP;
+        return HidNpadButton_Up;
     }
-    else if (strcmp(arg, "DRIGHT") == 0)
+    else if (strcmp(arg, "DRIGHT") == 0 || strcmp(arg, "DR") == 0)
     {
-        return KEY_DRIGHT;
+        return HidNpadButton_Right;
     }
-    else if (strcmp(arg, "DDOWN") == 0)
+    else if (strcmp(arg, "DDOWN") == 0 || strcmp(arg, "DD") == 0)
     {
-        return KEY_DDOWN;
+        return HidNpadButton_Down;
     }
     else if (strcmp(arg, "HOME") == 0)
     {
-        return KEY_HOME;
+        return HiddbgNpadButton_Home;
     }
     else if (strcmp(arg, "CAPTURE") == 0)
     {
-        return KEY_CAPTURE;
+        return HiddbgNpadButton_Capture;
     }
-    return KEY_A; //I guess lol
+    
+    return HidNpadButton_A; //I guess lol
 }
 
 Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {
@@ -184,4 +207,26 @@ Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {
         .buffer_attrs = {SfBufferAttr_HipcMapTransferAllowsNonSecure | SfBufferAttr_HipcMapAlias | SfBufferAttr_Out},
         .buffers = { { buffer, buffer_size } },
     );
+}
+
+static void sendPatternStatic(const HidsysNotificationLedPattern* pattern)
+{
+    s32 total_entries;
+    HidsysUniquePadId unique_pad_ids[2]={0};
+
+    Result rc = hidsysGetUniquePadsFromNpad(HidNpadIdType_Handheld, unique_pad_ids, 2, &total_entries);
+    if (R_FAILED(rc))
+        return; // probably incompatible or no pads connected
+
+    for (int i = 0; i < total_entries; i++)
+        rc = hidsysSetNotificationLedPattern(pattern, unique_pad_ids[i]);
+}
+
+void flashLed()
+{
+    Result rc = hidsysInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+    sendPatternStatic(&breathingpattern);
+    hidsysExit();
 }

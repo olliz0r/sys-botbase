@@ -25,21 +25,28 @@ typedef enum {
     Pause = 3
 } FreezeThreadState;
 
-Thread freezeThread, touchThread, keyboardThread;
+Thread freezeThread, touchThread, keyboardThread, clickThread;
 
 // prototype thread functions to give the illusion of cleanliness
 void sub_freeze(void *arg);
 void sub_touch(void *arg);
 void sub_key(void *arg);
+void sub_click(void *arg);
 
 // locks for thread
-Mutex freezeMutex, touchMutex, keyMutex;
+Mutex freezeMutex, touchMutex, keyMutex, clickMutex;
 
 // events for releasing or idling threads
 FreezeThreadState freeze_thr_state = Active; 
+u8 clickThreadState = 0;
 // key and touch events currently being processed
 KeyData currentKeyEvent = {0};
 TouchData currentTouchEvent = {0};
+char* currentClick = NULL;
+
+// for cancelling the touch/click thread
+u8 touchToken = 0;
+u8 clickToken = 0;
 
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
@@ -83,21 +90,24 @@ void __appInit(void)
     if (R_FAILED(rc))
         fatalThrow(rc);
     rc = pmdmntInitialize();
-	if (R_FAILED(rc)) {
+	if (R_FAILED(rc)) 
         fatalThrow(rc);
-	}
     rc = ldrDmntInitialize();
-	if (R_FAILED(rc)) {
+	if (R_FAILED(rc)) 
 		fatalThrow(rc);
-	}
     rc = pminfoInitialize();
-	if (R_FAILED(rc)) {
+	if (R_FAILED(rc)) 
 		fatalThrow(rc);
-	}
     rc = socketInitializeDefault();
     if (R_FAILED(rc))
         fatalThrow(rc);
     rc = capsscInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+    rc = viInitialize(ViServiceType_Default);
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+    rc = psmInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
 }
@@ -110,6 +120,8 @@ void __appExit(void)
     audoutExit();
     timeExit();
     socketExit();
+    viExit();
+    psmExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -138,6 +150,13 @@ void makeKeys(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
     currentKeyEvent.sequentialCount = sequentialCount;
     currentKeyEvent.state = 1;
     mutexUnlock(&keyMutex);
+}
+
+void makeClickSeq(char* seq)
+{
+    mutexLock(&clickMutex);
+    currentClick = seq;
+    mutexUnlock(&clickMutex);
 }
 
 int argmain(int argc, char **argv)
@@ -227,16 +246,32 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-        HidControllerKeys key = parseStringToButton(argv[1]);
+        HidNpadButton key = parseStringToButton(argv[1]);
         click(key);
     }
+
+    //clickSeq <sequence> eg clickSeq A,W1000,B,W200,DUP,W500,DD,W350,%5000,1500,W2650,%0,0 (some params don't parse correctly, such as DDOWN so use the alt)
+    //syntax: <button>=click, 'W<number>'=wait/sleep thread, '+<button>'=press button, '-<button>'=release button, '%<x axis>,<y axis>'=move L stick <x axis, y axis>, '&<x axis>,<y axis>'=move R stick <x axis, y axis> 
+    if (!strcmp(argv[0], "clickSeq"))
+    {
+        if(argc != 2)
+            return 0;
+        
+        u64 sizeArg = strlen(argv[1]) + 1;
+        char* seqNew = malloc(sizeArg);
+        strcpy(seqNew, argv[1]);
+        makeClickSeq(seqNew);
+    }
+
+    if (!strcmp(argv[0], "clickCancel"))
+        clickToken = 1;
 
     //hold <buttontype>
     if (!strcmp(argv[0], "press"))
     {
         if(argc != 2)
             return 0;
-        HidControllerKeys key = parseStringToButton(argv[1]);
+        HidNpadButton key = parseStringToButton(argv[1]);
         press(key);
     }
 
@@ -245,7 +280,7 @@ int argmain(int argc, char **argv)
     {
         if(argc != 2)
             return 0;
-        HidControllerKeys key = parseStringToButton(argv[1]);
+        HidNpadButton key = parseStringToButton(argv[1]);
         release(key);
     }
 
@@ -386,7 +421,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.7\n");
+        printf("1.8\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -549,6 +584,9 @@ int argmain(int argc, char **argv)
         makeTouch(state, count, pollRate * 1e+6L * 2, true);
 	}
 
+    if (!strcmp(argv[0], "touchCancel"))
+        touchToken = 1;
+
     //key followed by arrayof: <HidKeyboardKey> to be pressed in sequential order
     //thank you Red (hp3721) for this functionality
     if (!strcmp(argv[0], "key"))
@@ -610,6 +648,43 @@ int argmain(int argc, char **argv)
         }
 
         makeKeys(keystate, 1);
+    }
+
+    //turns off the screen (display)
+    if (!strcmp(argv[0], "screenOff"))
+	{
+        ViDisplay temp_display;
+        Result rc = viOpenDisplay("Internal", &temp_display);
+        if (R_FAILED(rc))
+            rc = viOpenDefaultDisplay(&temp_display);
+        if (R_SUCCEEDED(rc))
+        {
+            rc = viSetDisplayPowerState(&temp_display, ViPowerState_NotScanning); // not scanning keeps the screen on but does not push new pixels to the display. Battery save is non-negligible and should be used where possible
+            svcSleepThread(1e+6l);
+            viCloseDisplay(&temp_display);
+        }
+    }
+
+    //turns on the screen (display)
+    if (!strcmp(argv[0], "screenOn"))
+	{
+        ViDisplay temp_display;
+        Result rc = viOpenDisplay("Internal", &temp_display);
+        if (R_FAILED(rc))
+            rc = viOpenDefaultDisplay(&temp_display);
+        if (R_SUCCEEDED(rc))
+        {
+            rc = viSetDisplayPowerState(&temp_display, ViPowerState_On);
+            svcSleepThread(1e+6l);
+            viCloseDisplay(&temp_display);
+        }
+    }
+    
+    if (!strcmp(argv[0], "charge"))
+	{
+        u32 charge;
+        psmGetBatteryChargePercentage(&charge);
+        printf("%d\n", charge);
     }
 
     return 0;
@@ -676,8 +751,15 @@ int main()
     rc = threadCreate(&keyboardThread, sub_key, (void*)&currentKeyEvent, NULL, THREAD_SIZE, 0x2C, -2); 
     if (R_SUCCEEDED(rc))
         rc = threadStart(&keyboardThread);
+
+    // click sequence thread
+    mutexInit(&clickMutex);
+    rc = threadCreate(&clickThread, sub_click, (void*)currentClick, NULL, THREAD_SIZE, 0x2C, -2); 
+    if (R_SUCCEEDED(rc))
+        {rc = threadStart(&clickThread);} // curly brackets remove compiler warning
     
-	
+	flashLed();
+
     while (appletMainLoop())
     {
         poll(pfds, fd_count, -1);
@@ -752,6 +834,8 @@ int main()
         currentKeyEvent.state = 3;
         threadWaitForExit(&keyboardThread);
         threadClose(&keyboardThread);
+        clickThreadState = 1;
+        threadWaitForExit(&clickThread);
 	}
 	
 	clearFreezes();
@@ -850,13 +934,15 @@ void sub_touch(void *arg)
         if (touchPtr->state == 1)
         {
             mutexLock(&touchMutex); // don't allow any more assignments to the touch var (will lock the main thread)
-            touch(touchPtr->states, touchPtr->sequentialCount, touchPtr->holdTime, touchPtr->hold);
+            touch(touchPtr->states, touchPtr->sequentialCount, touchPtr->holdTime, touchPtr->hold, &touchToken);
             free(touchPtr->states);
             touchPtr->state = 0;
             mutexUnlock(&touchMutex);
         }
 
         svcSleepThread(1e+6L);
+        
+        touchToken = 0;
 
         if (touchPtr->state == 3)
             break;
@@ -881,5 +967,27 @@ void sub_key(void *arg)
 
         if (keyPtr->state == 3)
             break;
+    }
+}
+
+void sub_click(void *arg)
+{
+    while (1)
+    {
+        if (clickThreadState == 1)
+            break;
+
+        if (currentClick != NULL)
+        {
+            mutexLock(&clickMutex);
+            clickSequence(currentClick, &clickToken);
+            free(currentClick); currentClick = NULL;
+            mutexUnlock(&clickMutex);
+            printf("done\n");
+        }
+
+        clickToken = 0;
+
+        svcSleepThread(1e+6L);
     }
 }

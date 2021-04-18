@@ -189,25 +189,29 @@ void readMem(u8* out, u64 offset, u64 size)
         printf("svcReadDebugProcessMemory: %d\n", rc);
 }
 
-void click(HidControllerKeys btn)
+void click(HidNpadButton btn)
 {
     initController();
     press(btn);
     svcSleepThread(buttonClickSleepTime * 1e+6L);
     release(btn);
 }
-void press(HidControllerKeys btn)
+void press(HidNpadButton btn)
 {
     initController();
     controllerState.buttons |= btn;
-    hiddbgSetHdlsState(controllerHandle, &controllerState);
+    Result rc = hiddbgSetHdlsState(controllerHandle, &controllerState);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgSetHdlsState: %d\n", rc);
 }
 
-void release(HidControllerKeys btn)
+void release(HidNpadButton btn)
 {
     initController();
     controllerState.buttons &= ~btn;
-    hiddbgSetHdlsState(controllerHandle, &controllerState);
+    Result rc = hiddbgSetHdlsState(controllerHandle, &controllerState);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgSetHdlsState: %d\n", rc);
 }
 
 void setStickState(int side, int dxVal, int dyVal)
@@ -261,7 +265,7 @@ u64 followMainPointer(s64* jumps, size_t count)
     return offset;
 }
 
-void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
+void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold, u8* token)
 {
     initController();
     state->delta_time = holdTime; // only the first touch needs this for whatever reason
@@ -274,6 +278,9 @@ void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold)
             hiddbgSetTouchScreenAutoPilotState(NULL, 0);
             svcSleepThread(pollRate * 1e+6L);
         }
+
+        if ((*token) == 1)
+            break;
     }
 
     if(hold) // send finger release event
@@ -313,4 +320,81 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
     }
 
     hiddbgUnsetKeyboardAutoPilotState();
+}
+
+void clickSequence(char* seq, u8* token)
+{
+    const char delim = ','; // used for chars and sticks
+    const char startWait = 'W';
+    const char startPress = '+';
+    const char startRelease = '-';
+    const char startLStick = '%';
+    const char startRStick = '&';
+    char* command = strtok(seq, &delim);
+    HidNpadButton currKey = {0};
+    u64 currentWait = 0;
+
+    initController();
+    while (command != NULL)
+    {
+        if ((*token) == 1)
+            break;
+
+        if (!strncmp(command, &startLStick, 1))
+        {
+            // l stick
+            s64 x = parseStringToSignedLong(&command[1]);
+            if(x > JOYSTICK_MAX) x = JOYSTICK_MAX; 
+            if(x < JOYSTICK_MIN) x = JOYSTICK_MIN; 
+            s64 y = 0;
+            command = strtok(NULL, &delim);
+            if (command != NULL)
+                y = parseStringToSignedLong(command);
+            if(y > JOYSTICK_MAX) y = JOYSTICK_MAX;
+            if(y < JOYSTICK_MIN) y = JOYSTICK_MIN;
+            setStickState(JOYSTICK_LEFT, (s32)x, (s32)y);
+        }
+        else if (!strncmp(command, &startRStick, 1))
+        {
+            // r stick
+            s64 x = parseStringToSignedLong(&command[1]);
+            if(x > JOYSTICK_MAX) x = JOYSTICK_MAX; 
+            if(x < JOYSTICK_MIN) x = JOYSTICK_MIN; 
+            s64 y = 0;
+            command = strtok(NULL, &delim);
+            if (command != NULL)
+                y = parseStringToSignedLong(command);
+            if(y > JOYSTICK_MAX) y = JOYSTICK_MAX;
+            if(y < JOYSTICK_MIN) y = JOYSTICK_MIN;
+            setStickState(JOYSTICK_RIGHT, (s32)x, (s32)y);
+        }
+        else if (!strncmp(command, &startPress, 1))
+        {
+            // press
+            currKey = parseStringToButton(&command[1]);
+            press(currKey);
+        }  
+        else if (!strncmp(command, &startRelease, 1))
+        {
+            // release
+            currKey = parseStringToButton(&command[1]);
+            press(currKey);
+        }   
+        else if (!strncmp(command, &startWait, 1))
+        {
+            // wait
+            currentWait = parseStringToInt(&command[1]);
+            svcSleepThread(currentWait * 1e+6l);
+        }
+        else
+        {
+            // click
+            currKey = parseStringToButton(command);
+            press(currKey);
+            svcSleepThread(buttonClickSleepTime * 1e+6L);
+            release(currKey);
+        }
+
+        command = strtok(NULL, &delim);
+    }
 }
