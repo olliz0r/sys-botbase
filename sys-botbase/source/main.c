@@ -110,9 +110,6 @@ void __appInit(void)
     rc = psmInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
-    rc = hidsysInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
 }
 
 void __appExit(void)
@@ -125,7 +122,6 @@ void __appExit(void)
     socketExit();
     viExit();
     psmExit();
-    hidsysExit();
 }
 
 u64 mainLoopSleepTime = 50;

@@ -224,5 +224,9 @@ static void sendPatternStatic(const HidsysNotificationLedPattern* pattern)
 
 void flashLed()
 {
+    Result rc = hidsysInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
     sendPatternStatic(&breathingpattern);
+    hidsysExit();
 }
