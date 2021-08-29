@@ -443,13 +443,30 @@ int argmain(int argc, char **argv)
 	{
 		if(argc < 3)
             return 0;
-        u64 finalJump = parseStringToSignedLong(argv[argc-1]);
+        s64 finalJump = parseStringToSignedLong(argv[argc-1]);
         u64 count = argc - 2;
 		s64 jumps[count];
 		for (int i = 1; i < argc-1; i++)
 			jumps[i-1] = parseStringToSignedLong(argv[i]);
 		u64 solved = followMainPointer(jumps, count);
         solved += finalJump;
+		printf("%016lX\n", solved);
+	}
+	
+	// pointerRelative <first (main) jump> <additional jumps> <final jump in pointerexpr> 
+	if (!strcmp(argv[0], "pointerRelative"))
+	{
+		if(argc < 3)
+            return 0;
+        s64 finalJump = parseStringToSignedLong(argv[argc-1]);
+        u64 count = argc - 2;
+		s64 jumps[count];
+		for (int i = 1; i < argc-1; i++)
+			jumps[i-1] = parseStringToSignedLong(argv[i]);
+		u64 solved = followMainPointer(jumps, count);
+        solved += finalJump;
+		MetaData meta = getMetaData();
+		solved -= meta.heap_base;
 		printf("%016lX\n", solved);
 	}
 
@@ -459,7 +476,7 @@ int argmain(int argc, char **argv)
 		if(argc < 4)
             return 0;
             
-        u64 finalJump = parseStringToSignedLong(argv[argc-1]);
+        s64 finalJump = parseStringToSignedLong(argv[argc-1]);
 		u64 size = parseStringToInt(argv[1]);
         u64 count = argc - 3;
 		s64 jumps[count];
@@ -476,7 +493,7 @@ int argmain(int argc, char **argv)
 		if(argc < 4)
             return 0;
             
-        u64 finalJump = parseStringToSignedLong(argv[argc-1]);
+        s64 finalJump = parseStringToSignedLong(argv[argc-1]);
         u64 count = argc - 3;
 		s64 jumps[count];
 		for (int i = 2; i < argc-1; i++)
@@ -756,7 +773,7 @@ int main()
     mutexInit(&clickMutex);
     rc = threadCreate(&clickThread, sub_click, (void*)currentClick, NULL, THREAD_SIZE, 0x2C, -2); 
     if (R_SUCCEEDED(rc))
-        {rc = threadStart(&clickThread);} // curly brackets remove compiler warning
+        rc = threadStart(&clickThread);
     
 	flashLed();
 
