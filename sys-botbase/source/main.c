@@ -312,14 +312,7 @@ int argmain(int argc, char **argv)
     //detachController
     if(!strcmp(argv[0], "detachController"))
     {
-        Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
-        if (R_FAILED(rc) && debugResultCodes)
-            printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
-        rc = hiddbgReleaseHdlsWorkBuffer();
-        if (R_FAILED(rc) && debugResultCodes)
-            printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
-        hiddbgExit();
-        bControllerIsInitialised = false;
+        detachController();
     }
 
     //configure <mainLoopSleepTime or buttonClickSleepTime> <time in ms>
@@ -421,7 +414,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.8\n");
+        printf("1.9\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -454,6 +447,7 @@ int argmain(int argc, char **argv)
 	}
 	
 	// pointerRelative <first (main) jump> <additional jumps> <final jump in pointerexpr> 
+	// returns offset relative to heap
 	if (!strcmp(argv[0], "pointerRelative"))
 	{
 		if(argc < 3)
