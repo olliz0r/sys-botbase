@@ -37,6 +37,7 @@ typedef struct {
 
 void attach();
 void detach();
+void detachController();
 u64 getMainNsoBase(u64 pid);
 u64 getHeapBase(Handle handle);
 u64 getTitleId(u64 pid);

@@ -21,6 +21,7 @@ u64 buttonClickSleepTime = 50;
 u64 keyPressSleepTime = 25;
 u64 pollRate = 17; // polling is linked to screen refresh rate (system UI) or game framerate. Most cases this is 1/60 or 1/30
 u32 fingerDiameter = 50;
+HiddbgHdlsSessionId sessionId = {0};
 
 void attach()
 {
@@ -40,6 +41,22 @@ void attach()
 void detach(){
     if (debughandle != 0)
         svcCloseHandle(debughandle);
+}
+
+void detachController()
+{
+    initController();
+
+    Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
+    rc = hiddbgReleaseHdlsWorkBuffer(sessionId);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
+    hiddbgExit();
+    bControllerIsInitialised = false;
+
+    sessionId.id = 0;
 }
 
 u64 getMainNsoBase(u64 pid){
@@ -140,7 +157,7 @@ void initController()
     controllerState.analog_stick_l.y = -0x0;
     controllerState.analog_stick_r.x = 0x0;
     controllerState.analog_stick_r.y = -0x0;
-    rc = hiddbgAttachHdlsWorkBuffer();
+    rc = hiddbgAttachHdlsWorkBuffer(&sessionId);
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgAttachHdlsWorkBuffer: %d\n", rc);
     rc = hiddbgAttachHdlsVirtualDevice(&controllerHandle, &controllerDevice);
@@ -150,7 +167,6 @@ void initController()
     dummyKeyboardState.keys[3] = 0x800000000000000UL; // Hackfix found by Red: an unused key press (KBD_MEDIA_CALC) is required to allow sequential same-key presses. bitfield[3]
     bControllerIsInitialised = true;
 }
-
 
 void poke(u64 offset, u64 size, u8* val)
 {
