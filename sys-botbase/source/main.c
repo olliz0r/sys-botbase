@@ -15,8 +15,8 @@
 #include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
-#define HEAP_SIZE 0x001000000
-#define THREAD_SIZE 0x20000
+#define HEAP_SIZE 0x00C00000
+#define THREAD_SIZE 0x1A000
 
 typedef enum {
     Active = 0,
@@ -38,7 +38,7 @@ Mutex freezeMutex, touchMutex, keyMutex, clickMutex;
 
 // events for releasing or idling threads
 FreezeThreadState freeze_thr_state = Active; 
-u8 clickThreadState = 0;
+u8 clickThreadState = 0; // 1 = break thread
 // key and touch events currently being processed
 KeyData currentKeyEvent = {0};
 TouchData currentTouchEvent = {0};
@@ -107,9 +107,6 @@ void __appInit(void)
     rc = viInitialize(ViServiceType_Default);
     if (R_FAILED(rc))
         fatalThrow(rc);
-    rc = psmInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
 }
 
 void __appExit(void)
@@ -121,7 +118,6 @@ void __appExit(void)
     timeExit();
     socketExit();
     viExit();
-    psmExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -694,8 +690,12 @@ int argmain(int argc, char **argv)
     if (!strcmp(argv[0], "charge"))
 	{
         u32 charge;
+        Result rc = psmInitialize();
+        if (R_FAILED(rc))
+            fatalThrow(rc);
         psmGetBatteryChargePercentage(&charge);
         printf("%d\n", charge);
+        psmExit();
     }
 
     return 0;
