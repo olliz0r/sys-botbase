@@ -43,22 +43,6 @@ void detach(){
         svcCloseHandle(debughandle);
 }
 
-void detachController()
-{
-    initController();
-
-    Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
-    rc = hiddbgReleaseHdlsWorkBuffer(sessionId);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
-    hiddbgExit();
-    bControllerIsInitialised = false;
-
-    sessionId.id = 0;
-}
-
 u64 getMainNsoBase(u64 pid){
     LoaderModuleInfo proc_modules[2];
     s32 numModules = 0;
@@ -168,6 +152,22 @@ void initController()
     bControllerIsInitialised = true;
 }
 
+void detachController()
+{
+    initController();
+
+    Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
+    rc = hiddbgReleaseHdlsWorkBuffer(sessionId);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
+    hiddbgExit();
+    bControllerIsInitialised = false;
+
+    sessionId.id = 0;
+}
+
 void poke(u64 offset, u64 size, u8* val)
 {
     attach();
@@ -212,6 +212,7 @@ void click(HidNpadButton btn)
     svcSleepThread(buttonClickSleepTime * 1e+6L);
     release(btn);
 }
+
 void press(HidNpadButton btn)
 {
     initController();
