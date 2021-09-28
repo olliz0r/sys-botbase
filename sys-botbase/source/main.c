@@ -107,6 +107,9 @@ void __appInit(void)
     rc = viInitialize(ViServiceType_Default);
     if (R_FAILED(rc))
         fatalThrow(rc);
+    rc = lblInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
 }
 
 void __appExit(void)
@@ -669,6 +672,7 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_NotScanning); // not scanning keeps the screen on but does not push new pixels to the display. Battery save is non-negligible and should be used where possible
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
+            lblSwitchBacklightOff(1ul);
         }
     }
 
@@ -684,6 +688,7 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_On);
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
+            lblSwitchBacklightOn(1ul);
         }
     }
     
