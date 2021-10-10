@@ -2,6 +2,7 @@
 
 extern Handle debughandle;
 extern bool bControllerIsInitialised;
+extern HidDeviceType controllerInitializedType;
 extern HiddbgHdlsHandle controllerHandle;
 extern HiddbgHdlsDeviceInfo controllerDevice;
 extern HiddbgHdlsState controllerState;

@@ -121,6 +121,7 @@ void __appExit(void)
     timeExit();
     socketExit();
     viExit();
+    lblExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -357,6 +358,12 @@ int argmain(int argc, char **argv)
         if(!strcmp(argv[1], "freezeRate")){
             u64 fFreezeRate = parseStringToInt(argv[2]);
             freezeRate = fFreezeRate;
+        }
+
+        if(!strcmp(argv[1], "controllerType")){
+            detachController();
+            u8 fControllerType = (u8)parseStringToInt(argv[2]);
+            controllerInitializedType = fControllerType;
         }
     }
 

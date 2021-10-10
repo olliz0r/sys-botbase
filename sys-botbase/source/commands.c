@@ -9,6 +9,7 @@
 
 //Controller:
 bool bControllerIsInitialised = false;
+HidDeviceType controllerInitializedType = HidDeviceType_FullKey3;
 HiddbgHdlsHandle controllerHandle = {0};
 HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
@@ -127,7 +128,7 @@ void initController()
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgInitialize: %d\n", rc);
     // Set the controller type to Pro-Controller, and set the npadInterfaceType.
-    controllerDevice.deviceType = HidDeviceType_FullKey3;
+    controllerDevice.deviceType = controllerInitializedType;
     controllerDevice.npadInterfaceType = HidNpadInterfaceType_Bluetooth;
     // Set the controller colors. The grip colors are for Pro-Controller on [9.0.0+].
     controllerDevice.singleColorBody = RGBA8_MAXALPHA(255,255,255);
