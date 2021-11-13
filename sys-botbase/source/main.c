@@ -178,6 +178,25 @@ int argmain(int argc, char **argv)
         peek(meta.heap_base + offset, size);
     }
 
+    if (!strcmp(argv[0], "peekMulti"))
+    {
+        if(argc < 3 || argc % 2 == 0)
+            return 0;
+
+        MetaData meta = getMetaData();
+
+        u64 itemCount = (argc - 1)/2;
+        u64 offsets[itemCount];
+        u64 sizes[itemCount];
+
+        for (int i = 0; i < itemCount; ++i)
+        {
+            offsets[i] = meta.heap_base + parseStringToInt(argv[(i*2)+1]);
+            sizes[i] = parseStringToInt(argv[(i*2)+2]);
+        }
+        peekMulti(offsets, sizes, itemCount);
+    }
+
     if (!strcmp(argv[0], "peekAbsolute"))
     {
         if(argc != 3)
@@ -186,6 +205,23 @@ int argmain(int argc, char **argv)
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
         peek(offset, size);
+    }
+
+    if (!strcmp(argv[0], "peekAbsoluteMulti"))
+    {
+        if(argc < 3 || argc % 2 == 0)
+            return 0;
+
+        u64 itemCount = (argc - 1)/2;
+        u64 offsets[itemCount];
+        u64 sizes[itemCount];
+
+        for (int i = 0; i < itemCount; ++i)
+        {
+            offsets[i] = parseStringToInt(argv[(i*2)+1]);
+            sizes[i] = parseStringToInt(argv[(i*2)+2]);
+        }
+        peekMulti(offsets, sizes, itemCount);
     }
 
     if (!strcmp(argv[0], "peekMain"))
@@ -198,6 +234,25 @@ int argmain(int argc, char **argv)
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
         peek(meta.main_nso_base + offset, size);
+    }
+
+    if (!strcmp(argv[0], "peekMainMulti"))
+    {
+        if(argc < 3 || argc % 2 == 0)
+            return 0;
+
+        MetaData meta = getMetaData();
+
+        u64 itemCount = (argc - 1)/2;
+        u64 offsets[itemCount];
+        u64 sizes[itemCount];
+
+        for (int i = 0; i < itemCount; ++i)
+        {
+            offsets[i] = meta.main_nso_base + parseStringToInt(argv[(i*2)+1]);
+            sizes[i] = parseStringToInt(argv[(i*2)+2]);
+        }
+        peekMulti(offsets, sizes, itemCount);
     }
 
     //poke <address in hex or dec> <data in hex or dec>
@@ -485,6 +540,54 @@ int argmain(int argc, char **argv)
 		u64 solved = followMainPointer(jumps, count);
         solved += finalJump;
         peek(solved, size);
+	}
+
+    // pointerPeekMulti <amount of bytes in hex or dec> <first (main) jump> <additional jumps> <final jump in pointerexpr> split by asterisks (*)
+    if (!strcmp(argv[0], "pointerPeekMulti"))
+	{
+		if(argc < 4)
+            return 0;
+
+        // we guess a max of 40 for now
+        u64 offsets[40];
+        u64 sizes[40];
+        u64 itemCount = 0;
+
+        u64 currIndex = 1;
+        u64 lastIndex = 1;
+
+        while (currIndex < argc)
+        {
+            // count first
+            char* thisArg = argv[currIndex];
+            while (strcmp(thisArg, "*"))
+            {   
+                currIndex++;
+                if (currIndex < argc)
+                    thisArg = argv[currIndex];
+                else 
+                    break;
+            }
+            
+            u64 thisCount = currIndex - lastIndex;
+            
+            s64 finalJump = parseStringToSignedLong(argv[currIndex-1]);
+            u64 size = parseStringToSignedLong(argv[lastIndex]);
+            u64 count = thisCount - 2;
+            s64 jumps[count];
+            for (int i = 1; i < count+1; i++)
+                jumps[i-1] = parseStringToSignedLong(argv[i+lastIndex]);
+            u64 solved = followMainPointer(jumps, count);
+            solved += finalJump;
+
+            offsets[itemCount] = solved;
+            sizes[itemCount] = size;
+            itemCount++;
+            currIndex++;
+            lastIndex = currIndex;
+        }
+        
+        peekMulti(offsets, sizes, itemCount);
 	}
 
     // pointerPoke <data to be sent> <first (main) jump> <additional jumps> <final jump in pointerexpr>

@@ -199,6 +199,31 @@ void peek(u64 offset, u64 size)
     free(out);
 }
 
+void peekMulti(u64* offset, u64* size, u64 count)
+{
+    u64 totalSize = 0;
+    for (int i = 0; i < count; i++)
+        totalSize += size[i];
+    
+    u8 *out = malloc(sizeof(u8) * totalSize);
+    u64 ofs = 0;
+    attach();
+    for (int i = 0; i < count; i++)
+    {
+        readMem(out + ofs, offset[i], size[i]);
+        ofs += size[i];
+    }
+    detach();
+
+    u64 i;
+    for (i = 0; i < totalSize; i++)
+    {
+        printf("%02X", out[i]);
+    }
+    printf("\n");
+    free(out);
+}
+
 void readMem(u8* out, u64 offset, u64 size)
 {
 	Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
