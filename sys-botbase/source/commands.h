@@ -2,6 +2,7 @@
 
 extern Handle debughandle;
 extern bool bControllerIsInitialised;
+extern HidDeviceType controllerInitializedType;
 extern HiddbgHdlsHandle controllerHandle;
 extern HiddbgHdlsDeviceInfo controllerDevice;
 extern HiddbgHdlsState controllerState;
@@ -47,6 +48,7 @@ MetaData getMetaData(void);
 void poke(u64 offset, u64 size, u8* val);
 void writeMem(u64 offset, u64 size, u8* val);
 void peek(u64 offset, u64 size);
+void peekMulti(u64* offset, u64* size, u64 count);
 void readMem(u8* out, u64 offset, u64 size);
 void click(HidNpadButton btn);
 void press(HidNpadButton btn);

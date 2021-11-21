@@ -9,6 +9,7 @@
 
 //Controller:
 bool bControllerIsInitialised = false;
+HidDeviceType controllerInitializedType = HidDeviceType_FullKey3;
 HiddbgHdlsHandle controllerHandle = {0};
 HiddbgHdlsDeviceInfo controllerDevice = {0};
 HiddbgHdlsState controllerState = {0};
@@ -41,22 +42,6 @@ void attach()
 void detach(){
     if (debughandle != 0)
         svcCloseHandle(debughandle);
-}
-
-void detachController()
-{
-    initController();
-
-    Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
-    rc = hiddbgReleaseHdlsWorkBuffer(sessionId);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
-    hiddbgExit();
-    bControllerIsInitialised = false;
-
-    sessionId.id = 0;
 }
 
 u64 getMainNsoBase(u64 pid){
@@ -143,7 +128,7 @@ void initController()
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgInitialize: %d\n", rc);
     // Set the controller type to Pro-Controller, and set the npadInterfaceType.
-    controllerDevice.deviceType = HidDeviceType_FullKey3;
+    controllerDevice.deviceType = controllerInitializedType;
     controllerDevice.npadInterfaceType = HidNpadInterfaceType_Bluetooth;
     // Set the controller colors. The grip colors are for Pro-Controller on [9.0.0+].
     controllerDevice.singleColorBody = RGBA8_MAXALPHA(255,255,255);
@@ -166,6 +151,22 @@ void initController()
     //init a dummy keyboard state for assignment between keypresses
     dummyKeyboardState.keys[3] = 0x800000000000000UL; // Hackfix found by Red: an unused key press (KBD_MEDIA_CALC) is required to allow sequential same-key presses. bitfield[3]
     bControllerIsInitialised = true;
+}
+
+void detachController()
+{
+    initController();
+
+    Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgDetachHdlsVirtualDevice: %d\n", rc);
+    rc = hiddbgReleaseHdlsWorkBuffer(sessionId);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
+    hiddbgExit();
+    bControllerIsInitialised = false;
+
+    sessionId.id = 0;
 }
 
 void poke(u64 offset, u64 size, u8* val)
@@ -198,6 +199,31 @@ void peek(u64 offset, u64 size)
     free(out);
 }
 
+void peekMulti(u64* offset, u64* size, u64 count)
+{
+    u64 totalSize = 0;
+    for (int i = 0; i < count; i++)
+        totalSize += size[i];
+    
+    u8 *out = malloc(sizeof(u8) * totalSize);
+    u64 ofs = 0;
+    attach();
+    for (int i = 0; i < count; i++)
+    {
+        readMem(out + ofs, offset[i], size[i]);
+        ofs += size[i];
+    }
+    detach();
+
+    u64 i;
+    for (i = 0; i < totalSize; i++)
+    {
+        printf("%02X", out[i]);
+    }
+    printf("\n");
+    free(out);
+}
+
 void readMem(u8* out, u64 offset, u64 size)
 {
 	Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
@@ -212,6 +238,7 @@ void click(HidNpadButton btn)
     svcSleepThread(buttonClickSleepTime * 1e+6L);
     release(btn);
 }
+
 void press(HidNpadButton btn)
 {
     initController();
@@ -274,6 +301,9 @@ u64 followMainPointer(s64* jumps, size_t count)
 	{
 		readMem(out, offset + jumps[i], size);
 		offset = *(u64*)out;
+        // this traversal resulted in an error
+        if (offset == 0)
+            break;
 	}
 	detach();
 	free(out);

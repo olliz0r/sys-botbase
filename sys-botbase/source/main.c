@@ -15,8 +15,8 @@
 #include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
-#define HEAP_SIZE 0x001000000
-#define THREAD_SIZE 0x20000
+#define HEAP_SIZE 0x00C00000
+#define THREAD_SIZE 0x1A000
 
 typedef enum {
     Active = 0,
@@ -38,7 +38,7 @@ Mutex freezeMutex, touchMutex, keyMutex, clickMutex;
 
 // events for releasing or idling threads
 FreezeThreadState freeze_thr_state = Active; 
-u8 clickThreadState = 0;
+u8 clickThreadState = 0; // 1 = break thread
 // key and touch events currently being processed
 KeyData currentKeyEvent = {0};
 TouchData currentTouchEvent = {0};
@@ -107,7 +107,7 @@ void __appInit(void)
     rc = viInitialize(ViServiceType_Default);
     if (R_FAILED(rc))
         fatalThrow(rc);
-    rc = psmInitialize();
+    rc = lblInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
 }
@@ -121,7 +121,7 @@ void __appExit(void)
     timeExit();
     socketExit();
     viExit();
-    psmExit();
+    lblExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -178,6 +178,25 @@ int argmain(int argc, char **argv)
         peek(meta.heap_base + offset, size);
     }
 
+    if (!strcmp(argv[0], "peekMulti"))
+    {
+        if(argc < 3 || argc % 2 == 0)
+            return 0;
+
+        MetaData meta = getMetaData();
+
+        u64 itemCount = (argc - 1)/2;
+        u64 offsets[itemCount];
+        u64 sizes[itemCount];
+
+        for (int i = 0; i < itemCount; ++i)
+        {
+            offsets[i] = meta.heap_base + parseStringToInt(argv[(i*2)+1]);
+            sizes[i] = parseStringToInt(argv[(i*2)+2]);
+        }
+        peekMulti(offsets, sizes, itemCount);
+    }
+
     if (!strcmp(argv[0], "peekAbsolute"))
     {
         if(argc != 3)
@@ -186,6 +205,23 @@ int argmain(int argc, char **argv)
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
         peek(offset, size);
+    }
+
+    if (!strcmp(argv[0], "peekAbsoluteMulti"))
+    {
+        if(argc < 3 || argc % 2 == 0)
+            return 0;
+
+        u64 itemCount = (argc - 1)/2;
+        u64 offsets[itemCount];
+        u64 sizes[itemCount];
+
+        for (int i = 0; i < itemCount; ++i)
+        {
+            offsets[i] = parseStringToInt(argv[(i*2)+1]);
+            sizes[i] = parseStringToInt(argv[(i*2)+2]);
+        }
+        peekMulti(offsets, sizes, itemCount);
     }
 
     if (!strcmp(argv[0], "peekMain"))
@@ -198,6 +234,25 @@ int argmain(int argc, char **argv)
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
         peek(meta.main_nso_base + offset, size);
+    }
+
+    if (!strcmp(argv[0], "peekMainMulti"))
+    {
+        if(argc < 3 || argc % 2 == 0)
+            return 0;
+
+        MetaData meta = getMetaData();
+
+        u64 itemCount = (argc - 1)/2;
+        u64 offsets[itemCount];
+        u64 sizes[itemCount];
+
+        for (int i = 0; i < itemCount; ++i)
+        {
+            offsets[i] = meta.main_nso_base + parseStringToInt(argv[(i*2)+1]);
+            sizes[i] = parseStringToInt(argv[(i*2)+2]);
+        }
+        peekMulti(offsets, sizes, itemCount);
     }
 
     //poke <address in hex or dec> <data in hex or dec>
@@ -359,6 +414,12 @@ int argmain(int argc, char **argv)
             u64 fFreezeRate = parseStringToInt(argv[2]);
             freezeRate = fFreezeRate;
         }
+
+        if(!strcmp(argv[1], "controllerType")){
+            detachController();
+            u8 fControllerType = (u8)parseStringToInt(argv[2]);
+            controllerInitializedType = fControllerType;
+        }
     }
 
     if(!strcmp(argv[0], "getTitleID")){
@@ -414,7 +475,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.9\n");
+        printf("2.0\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -442,7 +503,8 @@ int argmain(int argc, char **argv)
 		for (int i = 1; i < argc-1; i++)
 			jumps[i-1] = parseStringToSignedLong(argv[i]);
 		u64 solved = followMainPointer(jumps, count);
-        solved += finalJump;
+        if (solved != 0)
+            solved += finalJump;
 		printf("%016lX\n", solved);
 	}
 	
@@ -458,13 +520,17 @@ int argmain(int argc, char **argv)
 		for (int i = 1; i < argc-1; i++)
 			jumps[i-1] = parseStringToSignedLong(argv[i]);
 		u64 solved = followMainPointer(jumps, count);
-        solved += finalJump;
-		MetaData meta = getMetaData();
-		solved -= meta.heap_base;
+        if (solved != 0)
+        {
+            solved += finalJump;
+            MetaData meta = getMetaData();
+            solved -= meta.heap_base;
+        }
 		printf("%016lX\n", solved);
 	}
 
     // pointerPeek <amount of bytes in hex or dec> <first (main) jump> <additional jumps> <final jump in pointerexpr>
+    // warning: no validation
     if (!strcmp(argv[0], "pointerPeek"))
 	{
 		if(argc < 4)
@@ -481,7 +547,57 @@ int argmain(int argc, char **argv)
         peek(solved, size);
 	}
 
+    // pointerPeekMulti <amount of bytes in hex or dec> <first (main) jump> <additional jumps> <final jump in pointerexpr> split by asterisks (*)
+    // warning: no validation
+    if (!strcmp(argv[0], "pointerPeekMulti"))
+	{
+		if(argc < 4)
+            return 0;
+
+        // we guess a max of 40 for now
+        u64 offsets[40];
+        u64 sizes[40];
+        u64 itemCount = 0;
+
+        u64 currIndex = 1;
+        u64 lastIndex = 1;
+
+        while (currIndex < argc)
+        {
+            // count first
+            char* thisArg = argv[currIndex];
+            while (strcmp(thisArg, "*"))
+            {   
+                currIndex++;
+                if (currIndex < argc)
+                    thisArg = argv[currIndex];
+                else 
+                    break;
+            }
+            
+            u64 thisCount = currIndex - lastIndex;
+            
+            s64 finalJump = parseStringToSignedLong(argv[currIndex-1]);
+            u64 size = parseStringToSignedLong(argv[lastIndex]);
+            u64 count = thisCount - 2;
+            s64 jumps[count];
+            for (int i = 1; i < count+1; i++)
+                jumps[i-1] = parseStringToSignedLong(argv[i+lastIndex]);
+            u64 solved = followMainPointer(jumps, count);
+            solved += finalJump;
+
+            offsets[itemCount] = solved;
+            sizes[itemCount] = size;
+            itemCount++;
+            currIndex++;
+            lastIndex = currIndex;
+        }
+        
+        peekMulti(offsets, sizes, itemCount);
+	}
+
     // pointerPoke <data to be sent> <first (main) jump> <additional jumps> <final jump in pointerexpr>
+    // warning: no validation
     if (!strcmp(argv[0], "pointerPoke"))
 	{
 		if(argc < 4)
@@ -673,6 +789,7 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_NotScanning); // not scanning keeps the screen on but does not push new pixels to the display. Battery save is non-negligible and should be used where possible
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
+            lblSwitchBacklightOff(1ul);
         }
     }
 
@@ -688,14 +805,19 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_On);
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
+            lblSwitchBacklightOn(1ul);
         }
     }
     
     if (!strcmp(argv[0], "charge"))
 	{
         u32 charge;
+        Result rc = psmInitialize();
+        if (R_FAILED(rc))
+            fatalThrow(rc);
         psmGetBatteryChargePercentage(&charge);
         printf("%d\n", charge);
+        psmExit();
     }
 
     return 0;
