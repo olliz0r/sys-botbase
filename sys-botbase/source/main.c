@@ -475,7 +475,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("1.9\n");
+        printf("2.0\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -503,7 +503,8 @@ int argmain(int argc, char **argv)
 		for (int i = 1; i < argc-1; i++)
 			jumps[i-1] = parseStringToSignedLong(argv[i]);
 		u64 solved = followMainPointer(jumps, count);
-        solved += finalJump;
+        if (solved != 0)
+            solved += finalJump;
 		printf("%016lX\n", solved);
 	}
 	
@@ -519,13 +520,17 @@ int argmain(int argc, char **argv)
 		for (int i = 1; i < argc-1; i++)
 			jumps[i-1] = parseStringToSignedLong(argv[i]);
 		u64 solved = followMainPointer(jumps, count);
-        solved += finalJump;
-		MetaData meta = getMetaData();
-		solved -= meta.heap_base;
+        if (solved != 0)
+        {
+            solved += finalJump;
+            MetaData meta = getMetaData();
+            solved -= meta.heap_base;
+        }
 		printf("%016lX\n", solved);
 	}
 
     // pointerPeek <amount of bytes in hex or dec> <first (main) jump> <additional jumps> <final jump in pointerexpr>
+    // warning: no validation
     if (!strcmp(argv[0], "pointerPeek"))
 	{
 		if(argc < 4)
@@ -543,6 +548,7 @@ int argmain(int argc, char **argv)
 	}
 
     // pointerPeekMulti <amount of bytes in hex or dec> <first (main) jump> <additional jumps> <final jump in pointerexpr> split by asterisks (*)
+    // warning: no validation
     if (!strcmp(argv[0], "pointerPeekMulti"))
 	{
 		if(argc < 4)
@@ -591,6 +597,7 @@ int argmain(int argc, char **argv)
 	}
 
     // pointerPoke <data to be sent> <first (main) jump> <additional jumps> <final jump in pointerexpr>
+    // warning: no validation
     if (!strcmp(argv[0], "pointerPoke"))
 	{
 		if(argc < 4)

@@ -301,6 +301,9 @@ u64 followMainPointer(s64* jumps, size_t count)
 	{
 		readMem(out, offset + jumps[i], size);
 		offset = *(u64*)out;
+        // this traversal resulted in an error
+        if (offset == 0)
+            break;
 	}
 	detach();
 	free(out);
