@@ -44,6 +44,7 @@ u64 getHeapBase(Handle handle);
 u64 getTitleId(u64 pid);
 void getBuildID(MetaData* meta, u64 pid);
 MetaData getMetaData(void);
+bool getIsProgramOpen(u64 id);
 
 void poke(u64 offset, u64 size, u8* val);
 void writeMem(u64 offset, u64 size, u8* val);

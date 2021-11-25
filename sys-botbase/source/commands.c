@@ -120,6 +120,16 @@ MetaData getMetaData(){
     return meta;
 }
 
+bool getIsProgramOpen(u64 id)
+{
+    u64 pid = 0;    
+    Result rc = pmdmntGetProcessId(&pid, id);
+    if (pid == 0 || R_FAILED(rc))
+        return false;
+
+    return true;
+}
+
 void initController()
 {
     if(bControllerIsInitialised) return;
