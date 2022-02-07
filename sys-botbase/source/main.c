@@ -453,6 +453,14 @@ int argmain(int argc, char **argv)
         printf("%016lX\n", meta.heap_base);
     }
 
+    if(!strcmp(argv[0], "isProgramRunning")){
+        if(argc != 2)
+            return 0;
+        u64 programId = parseStringToInt(argv[1]);
+        bool isRunning = getIsProgramOpen(programId);
+        printf("%d\n", isRunning);
+    }
+
     if(!strcmp(argv[0], "pixelPeek")){
         //errors with 0x668CE, unless debugunit flag is patched
         u64 bSize = 0x7D000;
@@ -475,7 +483,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("2.0\n");
+        printf("2.1\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
