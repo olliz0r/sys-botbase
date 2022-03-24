@@ -95,6 +95,9 @@ void __appInit(void)
     rc = socketInitializeDefault();
     if (R_FAILED(rc))
         fatalThrow(rc);
+    rc = lblInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
 }
 
 void __appExit(void)
@@ -103,6 +106,7 @@ void __appExit(void)
     audoutExit();
     timeExit();
     socketExit();
+    lblExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -788,12 +792,7 @@ int argmain(int argc, char **argv)
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
             viExit();
-
-            /*rc = lblInitialize();
-            if (R_FAILED(rc))
-                fatalThrow(rc);
             lblSwitchBacklightOff(1ul);
-            lblExit();*/
         }
         else
             viExit();
@@ -815,12 +814,7 @@ int argmain(int argc, char **argv)
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
             viExit();
-
-            /*rc = lblInitialize();
-            if (R_FAILED(rc))
-                fatalThrow(rc);
             lblSwitchBacklightOn(1ul);
-            lblExit();*/
         }
         else
             viExit();    
