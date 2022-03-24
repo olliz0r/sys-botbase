@@ -80,12 +80,6 @@ void __appInit(void)
             setsysExit();
         }
     }
-    rc = fsInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
-    rc = fsdevMountSdmc();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
     rc = timeInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
@@ -101,27 +95,14 @@ void __appInit(void)
     rc = socketInitializeDefault();
     if (R_FAILED(rc))
         fatalThrow(rc);
-    rc = capsscInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
-    rc = viInitialize(ViServiceType_Default);
-    if (R_FAILED(rc))
-        fatalThrow(rc);
-    rc = lblInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
 }
 
 void __appExit(void)
 {
-    fsdevUnmountAll();
-    fsExit();
     smExit();
     audoutExit();
     timeExit();
     socketExit();
-    viExit();
-    lblExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -462,12 +443,16 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "pixelPeek")){
+        Result rc = capsscInitialize();
+        if (R_FAILED(rc))
+            fatalThrow(rc);
+
         //errors with 0x668CE, unless debugunit flag is patched
         u64 bSize = 0x7D000;
         char* buf = malloc(bSize); 
         u64 outSize = 0;
 
-        Result rc = capsscCaptureForDebug(buf, bSize, &outSize);
+        rc = capsscCaptureForDebug(buf, bSize, &outSize);
 
         if (R_FAILED(rc) && debugResultCodes)
             printf("capssc, 1204: %d\n", rc);
@@ -480,10 +465,12 @@ int argmain(int argc, char **argv)
         printf("\n");
 
         free(buf);
+
+        capsscExit();
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("2.1\n");
+        printf("2.11\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -787,9 +774,12 @@ int argmain(int argc, char **argv)
 
     //turns off the screen (display)
     if (!strcmp(argv[0], "screenOff"))
-	{
+	{ 
+        Result rc = viInitialize(ViServiceType_Default);
+        if (R_FAILED(rc))
+            fatalThrow(rc);
         ViDisplay temp_display;
-        Result rc = viOpenDisplay("Internal", &temp_display);
+        rc = viOpenDisplay("Internal", &temp_display);
         if (R_FAILED(rc))
             rc = viOpenDefaultDisplay(&temp_display);
         if (R_SUCCEEDED(rc))
@@ -797,15 +787,26 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_NotScanning); // not scanning keeps the screen on but does not push new pixels to the display. Battery save is non-negligible and should be used where possible
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
+            viExit();
+
+            /*rc = lblInitialize();
+            if (R_FAILED(rc))
+                fatalThrow(rc);
             lblSwitchBacklightOff(1ul);
+            lblExit();*/
         }
+        else
+            viExit();
     }
 
     //turns on the screen (display)
     if (!strcmp(argv[0], "screenOn"))
 	{
+        Result rc = viInitialize(ViServiceType_Default);
+        if (R_FAILED(rc))
+            fatalThrow(rc);
         ViDisplay temp_display;
-        Result rc = viOpenDisplay("Internal", &temp_display);
+        rc = viOpenDisplay("Internal", &temp_display);
         if (R_FAILED(rc))
             rc = viOpenDefaultDisplay(&temp_display);
         if (R_SUCCEEDED(rc))
@@ -813,8 +814,16 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_On);
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
+            viExit();
+
+            /*rc = lblInitialize();
+            if (R_FAILED(rc))
+                fatalThrow(rc);
             lblSwitchBacklightOn(1ul);
+            lblExit();*/
         }
+        else
+            viExit();    
     }
     
     if (!strcmp(argv[0], "charge"))
