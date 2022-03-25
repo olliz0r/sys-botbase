@@ -486,7 +486,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("2.1\n");
+        printf("2.11\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
