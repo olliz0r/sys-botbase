@@ -80,15 +80,6 @@ void __appInit(void)
             setsysExit();
         }
     }
-    rc = fsInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
-    rc = fsdevMountSdmc();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
-    rc = timeInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
     rc = pmdmntInitialize();
 	if (R_FAILED(rc)) 
         fatalThrow(rc);
@@ -111,14 +102,10 @@ void __appInit(void)
 
 void __appExit(void)
 {
-    fsdevUnmountAll();
-    fsExit();
     smExit();
     audoutExit();
-    timeExit();
     socketExit();
     viExit();
-    lblExit();
 }
 
 u64 mainLoopSleepTime = 50;
