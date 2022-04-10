@@ -80,15 +80,6 @@ void __appInit(void)
             setsysExit();
         }
     }
-    rc = fsInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
-    rc = fsdevMountSdmc();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
-    rc = timeInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(rc);
     rc = pmdmntInitialize();
 	if (R_FAILED(rc)) 
         fatalThrow(rc);
@@ -107,24 +98,14 @@ void __appInit(void)
     rc = viInitialize(ViServiceType_Default);
     if (R_FAILED(rc))
         fatalThrow(rc);
-    if (hosversionBefore(14,0,0)) // lbl max sessions when 14.0.0
-    {
-        rc = lblInitialize();
-        if (R_FAILED(rc))
-            fatalThrow(rc);
-    }
 }
 
 void __appExit(void)
 {
-    fsdevUnmountAll();
-    fsExit();
     smExit();
     audoutExit();
-    timeExit();
     socketExit();
     viExit();
-    lblExit();
 }
 
 u64 mainLoopSleepTime = 50;
@@ -486,7 +467,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("2.11\n");
+        printf("2.2\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -800,8 +781,12 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_NotScanning); // not scanning keeps the screen on but does not push new pixels to the display. Battery save is non-negligible and should be used where possible
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
-            if (hosversionBefore(14,0,0))
-                lblSwitchBacklightOff(1ul);
+
+            rc = lblInitialize();
+            if (R_FAILED(rc))
+                fatalThrow(rc);
+            lblSwitchBacklightOff(1ul);
+            lblExit();
         }
     }
 
@@ -817,8 +802,12 @@ int argmain(int argc, char **argv)
             rc = viSetDisplayPowerState(&temp_display, ViPowerState_On);
             svcSleepThread(1e+6l);
             viCloseDisplay(&temp_display);
-            if (hosversionBefore(14,0,0))
-                lblSwitchBacklightOn(1ul);
+
+            rc = lblInitialize();
+            if (R_FAILED(rc))
+                fatalThrow(rc);
+            lblSwitchBacklightOn(1ul);
+            lblExit();
         }
     }
     
