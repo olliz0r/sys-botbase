@@ -1,50 +1,35 @@
-#Simple example on how to connect to and send commands to the sys module.
-#The example is for Pokemon Sword/Shield, it reads a .ek8 file from a certain file path, injects it into box1slot1
-#and starts a surprise trade with the given pokemon. It waits a certain amount of time (hoping the trade has completed)
-#before retrieving the new pokemon. Finally it extracts the pokemons .ek8 data from the game and saves it to the hard drive.
-#The script assumes the game is set up in a way that the character is not currently in any menus and that the cursor of the
-#pokebox is on box1slot1.
+# Blocking python (3.11) example for Pokemon Sword/Shield
 
-#The script isn't exactly robust, there are many ways to make it better (for example one could compare the box1slot1 data in
-#RAM with that of the pokemon sent to see if a trade has been found and if not back out of the menu to search for another 10 
-#seconds or so instead of waiting a fixed 45 seconds), but it is rather meant as a showcase of the functionalites of the 
-#sysmodule anyway.
-
-#Commands:
-#make sure to append \r\n to the end of the command string or the switch args parser might not work
-#responses end with a \n (only poke has a response atm)
-
-#click A/B/X/Y/LSTICK/RSTICK/L/R/ZL/ZR/PLUS/MINUS/DLEFT/DUP/DDOWN/DRIGHT/HOME/CAPTURE
-#press A/B/X/Y/LSTICK/RSTICK/L/R/ZL/ZR/PLUS/MINUS/DLEFT/DUP/DDOWN/DRIGHT/HOME/CAPTURE
-#release A/B/X/Y/LSTICK/RSTICK/L/R/ZL/ZR/PLUS/MINUS/DLEFT/DUP/DDOWN/DRIGHT/HOME/CAPTURE
-
-#peek <address in hex, prefaced by 0x> <amount of bytes, dec or hex with 0x>
-#poke <address in hex, prefaced by 0x> <data, if in hex prefaced with 0x>
-
-#setStick LEFT/RIGHT <xVal from -0x8000 to 0x7FFF> <yVal from -0x8000 to 0x7FFF
-
+# It reads a .ek8 file from a certain file path, injects it into box1slot1
+# Starts a surprise trade with the given pokemon. It waits a certain amount of time (hoping the trade has completed)
+# Finally, it extracts the pokemons .ek8 data from the game and saves it to the hard drive.
 
 import socket
 import time
-import binascii
 
 
+# Make sure to append "\r\n" to the end of every command to ensure arg are parsed correctly
 def sendCommand(s, content):
-    content += '\r\n' #important for the parser on the switch side
+    content += '\r\n'
     s.sendall(content.encode())
 
+
+# sys-botbase port is compiled for 6000
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(("192.168.178.25", 6000))
 
-fileIn = open("C:/temp/toInject.ek8", "rb")
-pokemonToInject = fileIn.read(344)
-pokemonToInject = str(binascii.hexlify(pokemonToInject), "utf-8")
 
-time.sleep(2)
+# Read file bytes
+with open("C:/temp/toInject.ek8", "rb") as inject:
+    pokemon = inject.read().hex()
+
+# Create a never ending loop
 while True:
-    sendCommand(s, f"poke 0x45075880 0x{pokemonToInject}") #read pokemon from file and inject it into box1slot1 for trade
 
+    # Inject pokemon file into box 1 slot 1
+    sendCommand(s, f"poke 0x45075880 0x{pokemon}")
 
+    # Automate trade buttons
     sendCommand(s, "click Y")
     time.sleep(1)
     sendCommand(s, "click DDOWN")
@@ -63,15 +48,16 @@ while True:
     sendCommand(s, "click A")
     time.sleep(0.7)
 
-    time.sleep(45) #Time we wait for a trade
+    # Time we wait for a trade
+    time.sleep(45)
     sendCommand(s, "click Y")
     time.sleep(0.7)
-    time.sleep(30) #probably needs to be longer for trade evolutions
+    time.sleep(30)
 
-    sendCommand(s, "peek 0x45075880 344") #get pokemon from box1slot1
-    time.sleep(0.5) #give time to answer
-    pokemonBytes = s.recv(689)
-    pokemonBytes = pokemonBytes[0:-1] #cut off \n at the end
-    fileOut = open("C:/temp/lastReceived.ek8", "wb")
-    fileOut.write(binascii.unhexlify(pokemonBytes))
-    fileOut.close()
+    # Read traded pokemon received from box 1 slot 1
+    sendCommand(s, "peek 0x45075880 344")
+
+    # Recieve data from socket and remove the trailing "\n"
+    traded_pokemon = s.recv(689)[:-1]
+    with open("C:/temp/lastReceived.ek8", "wb+") as dump:
+        dump.write(bytes.fromhex(traded_pokemon))
