@@ -7,6 +7,7 @@
 #include "commands.h"
 #include "util.h"
 
+
 //Controller:
 bool bControllerIsInitialised = false;
 HidDeviceType controllerInitializedType = HidDeviceType_FullKey3;
@@ -87,6 +88,19 @@ u64 getTitleId(u64 pid){
     return titleId;
 }
 
+u64 GetTitleVersion(u64 pid){
+    u64 titleV = 0;
+    s32 out;
+    NsApplicationContentMetaStatus *MetaStatus = malloc(sizeof(NsApplicationContentMetaStatus[100U]));
+    Result rc = nsListApplicationContentMetaStatus(getTitleId(pid), 0, MetaStatus, 100, &out);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("nsListApplicationContentMetaStatus: %d\n", rc);
+    for (int i = 0; i < out; i++) {
+        if (titleV < MetaStatus[i].version) titleV = MetaStatus[i].version;
+    }
+    return (titleV / 0x10000);
+}
+
 void getBuildID(MetaData* meta, u64 pid){
     LoaderModuleInfo proc_modules[2];
     s32 numModules = 0;
@@ -114,6 +128,7 @@ MetaData getMetaData(){
     meta.main_nso_base = getMainNsoBase(pid);
     meta.heap_base =  getHeapBase(debughandle);
     meta.titleID = getTitleId(pid);
+    meta.titleVersion = GetTitleVersion(pid);
     getBuildID(&meta, pid);
 
     detach();

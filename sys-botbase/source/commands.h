@@ -16,6 +16,7 @@ typedef struct {
     u64 main_nso_base;
     u64 heap_base;
     u64 titleID;
+    u64 titleVersion;
     u8 buildID[0x20];
 } MetaData;
 
@@ -42,6 +43,7 @@ void detachController();
 u64 getMainNsoBase(u64 pid);
 u64 getHeapBase(Handle handle);
 u64 getTitleId(u64 pid);
+u64 GetTitleVersion(u64 pid);
 void getBuildID(MetaData* meta, u64 pid);
 MetaData getMetaData(void);
 bool getIsProgramOpen(u64 id);

@@ -80,6 +80,9 @@ void __appInit(void)
             setsysExit();
         }
     }
+    rc = nsInitialize();
+	if (R_FAILED(rc)) 
+        fatalThrow(rc);
     rc = pmdmntInitialize();
 	if (R_FAILED(rc)) 
         fatalThrow(rc);
@@ -103,6 +106,7 @@ void __appInit(void)
 void __appExit(void)
 {
     smExit();
+    nsExit();
     audoutExit();
     socketExit();
     viExit();
@@ -411,6 +415,11 @@ int argmain(int argc, char **argv)
         printf("%016lX\n", meta.titleID);
     }
 
+    if(!strcmp(argv[0], "getTitleVersion")){
+        MetaData meta = getMetaData();
+        printf("%016lX\n", meta.titleVersion);
+    }
+
     if(!strcmp(argv[0], "getSystemLanguage")){
         //thanks zaksa
         setInitialize();
@@ -467,7 +476,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("2.2\n");
+        printf("2.3\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
@@ -892,8 +901,8 @@ int main()
     rc = threadCreate(&clickThread, sub_click, (void*)currentClick, NULL, THREAD_SIZE, 0x2C, -2); 
     if (R_SUCCEEDED(rc))
         rc = threadStart(&clickThread);
-    
-	flashLed();
+
+    flashLed();
 
     while (appletMainLoop())
     {
