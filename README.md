@@ -17,7 +17,7 @@ A Nintendo Switch (CFW) sys-module that allows users to remote control their swi
 - Capture current screen and return as JPG
 
 ## Disclaimer:
-This project was created for the purpose of development for bot automation. The creators and maintainers of this project are not liable for any damages caused or bans received Use at your own risk.
+This project was created for the purpose of development for bot automation. The creators and maintainers of this project are not liable for any damages caused or bans received. Use at your own risk.
 
 ## Installation
 Download [latest release](https://github.com/olliz0r/sys-botbase/releases/latest) and extract into your Nintendo Switch SD card. Restart your switch. 

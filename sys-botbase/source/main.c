@@ -80,9 +80,6 @@ void __appInit(void)
             setsysExit();
         }
     }
-    rc = nsInitialize();
-	if (R_FAILED(rc)) 
-        fatalThrow(rc);
     rc = pmdmntInitialize();
 	if (R_FAILED(rc)) 
         fatalThrow(rc);

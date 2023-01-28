@@ -91,13 +91,22 @@ u64 getTitleId(u64 pid){
 u64 GetTitleVersion(u64 pid){
     u64 titleV = 0;
     s32 out;
+
+    Result rc = nsInitialize();
+	if (R_FAILED(rc)) 
+        fatalThrow(rc);
+
     NsApplicationContentMetaStatus *MetaStatus = malloc(sizeof(NsApplicationContentMetaStatus[100U]));
-    Result rc = nsListApplicationContentMetaStatus(getTitleId(pid), 0, MetaStatus, 100, &out);
+    rc = nsListApplicationContentMetaStatus(getTitleId(pid), 0, MetaStatus, 100, &out);
     if (R_FAILED(rc) && debugResultCodes)
         printf("nsListApplicationContentMetaStatus: %d\n", rc);
     for (int i = 0; i < out; i++) {
         if (titleV < MetaStatus[i].version) titleV = MetaStatus[i].version;
     }
+
+    free(MetaStatus);
+    nsExit();
+
     return (titleV / 0x10000);
 }
 
