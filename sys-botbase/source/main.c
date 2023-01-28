@@ -48,6 +48,10 @@ char* currentClick = NULL;
 u8 touchToken = 0;
 u8 clickToken = 0;
 
+// fd counters and max size
+int fd_count = 0;
+int fd_size = 5;
+
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
 
@@ -160,7 +164,7 @@ int argmain(int argc, char **argv)
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
-        peek(meta.heap_base + offset, size);
+        peekInfinite(meta.heap_base + offset, size);
     }
 
     if (!strcmp(argv[0], "peekMulti"))
@@ -189,7 +193,7 @@ int argmain(int argc, char **argv)
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
-        peek(offset, size);
+        peekInfinite(offset, size);
     }
 
     if (!strcmp(argv[0], "peekAbsoluteMulti"))
@@ -218,7 +222,7 @@ int argmain(int argc, char **argv)
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
-        peek(meta.main_nso_base + offset, size);
+        peekInfinite(meta.main_nso_base + offset, size);
     }
 
     if (!strcmp(argv[0], "peekMainMulti"))
@@ -828,6 +832,11 @@ int argmain(int argc, char **argv)
         psmExit();
     }
 
+    if (!strcmp(argv[0], "fdCount"))
+	{
+        printf("%d\n", fd_count);
+    }
+
     return 0;
 }
 
@@ -859,8 +868,6 @@ int main()
     int c = sizeof(struct sockaddr_in);
     struct sockaddr_in client;
 
-    int fd_count = 0;
-    int fd_size = 5;
     struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
 
     int listenfd = setupServerSocket();

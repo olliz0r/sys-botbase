@@ -223,6 +223,31 @@ void peek(u64 offset, u64 size)
     free(out);
 }
 
+void peekInfinite(u64 offset, u64 size)
+{
+    u64 sizeRemainder = size;
+    u64 totalFetched = 0;
+    u64 i;
+    u8 *out = malloc(sizeof(u8) * MAX_LINE_LENGTH);
+
+    attach();
+    while (sizeRemainder > 0)
+    {
+        u64 thisBuffersize = sizeRemainder > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : sizeRemainder;
+        sizeRemainder -= thisBuffersize;
+        readMem(out, offset + totalFetched, thisBuffersize);
+        for (i = 0; i < thisBuffersize; i++)
+        {
+            printf("%02X", out[i]);
+        }
+
+        totalFetched += thisBuffersize;
+    }
+    detach();
+    printf("\n");
+    free(out);
+}
+
 void peekMulti(u64* offset, u64* size, u64 count)
 {
     u64 totalSize = 0;
