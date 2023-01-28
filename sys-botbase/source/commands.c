@@ -62,20 +62,10 @@ u64 getMainNsoBase(u64 pid){
 }
 
 u64 getHeapBase(Handle handle){
-    MemoryInfo meminfo;
-    memset(&meminfo, 0, sizeof(MemoryInfo));
     u64 heap_base = 0;
-    u64 lastaddr = 0;
-    do
-    {
-        lastaddr = meminfo.addr;
-        u32 pageinfo;
-        svcQueryDebugProcessMemory(&meminfo, &pageinfo, handle, meminfo.addr + meminfo.size);
-        if((meminfo.type & MemType_Heap) == MemType_Heap){
-            heap_base = meminfo.addr;
-            break;
-        }
-    } while (lastaddr < meminfo.addr + meminfo.size);
+    Result rc = svcGetInfo(&heap_base, InfoType_HeapRegionAddress, debughandle, 0);
+    if (R_FAILED(rc) && debugResultCodes)
+        printf("svcGetInfo: %d\n", rc);
 
     return heap_base;
 }
