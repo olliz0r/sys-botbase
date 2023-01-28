@@ -30,6 +30,28 @@ static const HidsysNotificationLedPattern breathingpattern = {
     },
 };
 
+// beeg flash for wireless controller
+static const HidsysNotificationLedPattern flashpattern = {
+    .baseMiniCycleDuration = 0xF, // 200ms.
+    .totalMiniCycles = 0x2,       // 3 mini cycles. Last one 12.5ms.
+    .totalFullCycles = 0x2,       // 2 full cycles.
+    .startIntensity = 0xF,        // 100%.
+    .miniCycles = {
+        // First and cloned cycle
+        {
+            .ledIntensity = 0xF,      // 100%.
+            .transitionSteps = 0xF,   // 15 steps. Transition time 1.5s.
+            .finalStepDuration = 0x0, // 12.5ms.
+        },
+        // clone
+        {
+            .ledIntensity = 0xF,      // 100%.
+            .transitionSteps = 0xF,   // 15 steps. Transition time 1.5s.
+            .finalStepDuration = 0x0, // 12.5ms.
+        },
+    },
+};
+
 int setupServerSocket()
 {
     int lissock;
@@ -194,7 +216,15 @@ HidNpadButton parseStringToButton(char* arg)
     {
         return HiddbgNpadButton_Capture;
     }
-    
+    else if (strcmp(arg, "PALMA") == 0)
+    {
+        return HidNpadButton_Palma;
+    }
+    else if (strcmp(arg, "UNUSED") == 0) //Possibly useful for HOME button eaten issues
+    {
+        return BIT(20);
+    }
+
     return HidNpadButton_A; //I guess lol
 }
 
@@ -209,13 +239,13 @@ Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {
     );
 }
 
-static void sendPatternStatic(const HidsysNotificationLedPattern* pattern)
+static void sendPatternStatic(const HidsysNotificationLedPattern* pattern, const HidNpadIdType idType)
 {
     s32 total_entries;
     HidsysUniquePadId unique_pad_ids[2]={0};
 
-    Result rc = hidsysGetUniquePadsFromNpad(HidNpadIdType_Handheld, unique_pad_ids, 2, &total_entries);
-    if (R_FAILED(rc))
+    Result rc = hidsysGetUniquePadsFromNpad(idType, unique_pad_ids, 2, &total_entries);
+    if (R_FAILED(rc)) 
         return; // probably incompatible or no pads connected
 
     for (int i = 0; i < total_entries; i++)
@@ -227,6 +257,7 @@ void flashLed()
     Result rc = hidsysInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
-    sendPatternStatic(&breathingpattern);
+    sendPatternStatic(&breathingpattern, HidNpadIdType_Handheld);
+    sendPatternStatic(&flashpattern, HidNpadIdType_No1);
     hidsysExit();
 }
