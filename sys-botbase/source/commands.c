@@ -100,6 +100,20 @@ u64 GetTitleVersion(u64 pid){
     return (titleV / 0x10000);
 }
 
+u64 getoutsize(NsApplicationControlData* buf){
+    Result rc = nsInitialize();
+    if (R_FAILED(rc))
+        fatalThrow(rc);
+    u64 outsize = 0;
+    u64 pid = 0;
+    pmdmntGetApplicationProcessId(&pid);
+    rc = nsGetApplicationControlData(NsApplicationControlSource_Storage, getTitleId(pid), buf, sizeof(NsApplicationControlData), &outsize);
+    if (R_FAILED(rc)) {
+        printf("nsGetApplicationControlData() failed: 0x%x\n", rc);
+    }
+    nsExit();
+    return outsize;
+}
 void getBuildID(MetaData* meta, u64 pid){
     LoaderModuleInfo proc_modules[2];
     s32 numModules = 0;

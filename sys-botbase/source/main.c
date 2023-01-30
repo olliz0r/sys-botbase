@@ -358,7 +358,52 @@ int argmain(int argc, char **argv)
     {
         detachController();
     }
-
+    if (!strcmp(argv[0], "game")) 
+    {
+        if (argc != 2)
+            return 0;
+        NsApplicationControlData* buf = (NsApplicationControlData*)malloc(sizeof(NsApplicationControlData));
+        u64 outsize = getoutsize(buf);
+        NacpLanguageEntry* langentry = NULL;    
+        if (outsize != 0) {
+            if (!strcmp(argv[1], "icon")) {
+                u64 i;
+                for (i = 0; i < outsize - sizeof(buf->nacp); i++)
+                {
+                    printf("%02X", buf->icon[i]);
+                }
+                printf("\n");
+            }
+            if (!strcmp(argv[1], "version"))
+            {
+                char version[0x11];
+                memset(version, 0, sizeof(version));
+                strncpy(version, buf->nacp.display_version, sizeof(version));
+                printf("%s\n", version);
+            }
+            if (!strcmp(argv[1], "rating"))
+            {
+                printf("%d\n", buf->nacp.rating_age[0]);
+            }
+            if (!strcmp(argv[1], "author"))
+            {
+                char author[0x101];
+                nacpGetLanguageEntry(&buf->nacp, &langentry);
+                memset(author, 0, sizeof(author));
+                strncpy(author, langentry->author, sizeof(author));
+                printf("%s\n", author);
+            }
+            if (!strcmp(argv[1], "name"))
+            {
+                char name[0x201];
+                nacpGetLanguageEntry(&buf->nacp, &langentry);
+                memset(name, 0, sizeof(name));
+                strncpy(name, langentry->name, sizeof(name));
+                printf("%s\n", name);
+            }
+        }
+        free(buf);
+    }
     //configure <mainLoopSleepTime or buttonClickSleepTime> <time in ms>
     if(!strcmp(argv[0], "configure")){
         if(argc != 3)

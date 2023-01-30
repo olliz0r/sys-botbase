@@ -44,6 +44,7 @@ u64 getMainNsoBase(u64 pid);
 u64 getHeapBase(Handle handle);
 u64 getTitleId(u64 pid);
 u64 GetTitleVersion(u64 pid);
+u64 getoutsize(NsApplicationControlData* buf);
 void getBuildID(MetaData* meta, u64 pid);
 MetaData getMetaData(void);
 bool getIsProgramOpen(u64 id);
