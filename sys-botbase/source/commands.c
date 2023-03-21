@@ -24,6 +24,9 @@ u64 keyPressSleepTime = 25;
 u64 pollRate = 17; // polling is linked to screen refresh rate (system UI) or game framerate. Most cases this is 1/60 or 1/30
 u32 fingerDiameter = 50;
 HiddbgHdlsSessionId sessionId = {0};
+bool initflag=0;
+u8 *workmem = NULL;
+size_t workmem_size = 0x1000;
 
 void attach()
 {
@@ -163,9 +166,22 @@ void initController()
     if(bControllerIsInitialised) return;
     //taken from switchexamples github
     Result rc = hiddbgInitialize();
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("hiddbgInitialize: %d\n", rc);
-    // Set the controller type to Pro-Controller, and set the npadInterfaceType.
+	
+	//old
+    //if (R_FAILED(rc) && debugResultCodes)
+    //printf("hiddbgInitialize: %d\n", rc);
+    
+	//new
+	if (R_FAILED(rc) && debugResultCodes) {
+        printf("hiddbgInitialize(): 0x%x\n", rc);
+    }
+    else {
+        workmem = aligned_alloc(0x1000, workmem_size);
+        if (workmem) initflag = 1;
+        else printf("workmem alloc failed\n");
+    }    
+	
+	// Set the controller type to Pro-Controller, and set the npadInterfaceType.
     controllerDevice.deviceType = controllerInitializedType;
     controllerDevice.npadInterfaceType = HidNpadInterfaceType_Bluetooth;
     // Set the controller colors. The grip colors are for Pro-Controller on [9.0.0+].
@@ -180,7 +196,8 @@ void initController()
     controllerState.analog_stick_l.y = -0x0;
     controllerState.analog_stick_r.x = 0x0;
     controllerState.analog_stick_r.y = -0x0;
-    rc = hiddbgAttachHdlsWorkBuffer(&sessionId);
+
+    rc = hiddbgAttachHdlsWorkBuffer(&sessionId, workmem, workmem_size);
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgAttachHdlsWorkBuffer: %d\n", rc);
     rc = hiddbgAttachHdlsVirtualDevice(&controllerHandle, &controllerDevice);
@@ -202,6 +219,7 @@ void detachController()
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
     hiddbgExit();
+	free(workmem);
     bControllerIsInitialised = false;
 
     sessionId.id = 0;
