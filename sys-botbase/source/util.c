@@ -257,7 +257,7 @@ void flashLed()
     Result rc = hidsysInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
-    sendPatternStatic(&breathingpattern, HidNpadIdType_Handheld);
-    sendPatternStatic(&flashpattern, HidNpadIdType_No1);
+    sendPatternStatic(&breathingpattern, HidNpadIdType_Handheld); // glow in and out x2 for docked joycons
+    sendPatternStatic(&flashpattern, HidNpadIdType_No1); // big hard single glow for wireless/wired joycons or controllers
     hidsysExit();
 }
