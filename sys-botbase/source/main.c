@@ -15,7 +15,7 @@
 #include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
-#define HEAP_SIZE 0x00C00000
+#define HEAP_SIZE 0x00300000
 #define THREAD_SIZE 0x1A000
 
 typedef enum {
@@ -522,7 +522,7 @@ int argmain(int argc, char **argv)
     }
 
     if(!strcmp(argv[0], "getVersion")){
-        printf("2.3\n");
+        printf("2.31\n");
     }
 	
 	// follow pointers and print absolute offset (little endian, flip it yourself if required)
