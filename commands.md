@@ -73,9 +73,9 @@ See https://github.com/olliz0r/sys-botbase/blob/master/sys-botbase/source/util.c
 See https://switchbrew.github.io/libnx/hid_8h.html HidKeyboardKey and HidKeyboardModifier for available keys and modifiers.
 |Command|Description|Parameters|Usage|
 |--|--|--|--|
-|key|Types several keys on the keyboard in sequence|1. HidKeyboardKey1<br>...<br>n. HidKeyboardKeyN||
-|keyMod|Types several keys on the keyboard in sequence with modifier keys<br>Do not bitshift the modifiers yourself, sys-botbase will do the shifting| 1. HidKeyboardKey1<br>2.HidKeyboardModifier1<br>...<br>n-1. HidKeyboardKeyN<br>n. HidKeyboardModifierN||
-|keyMulti|Presses several keys at the same time|1. HidKeyboardKey1<br>...<br>n. HidKeyboardKeyN||
+|key|Types several keys on the keyboard in sequence|1. HidKeyboardKey1<br>...<br>n. HidKeyboardKeyN|key 11 8 15 15 18|
+|keyMod|Types several keys on the keyboard in sequence with modifier keys<br>Do not bitshift the modifiers yourself, sys-botbase will do the shifting| 1. HidKeyboardKey1<br>2.HidKeyboardModifier1<br>...<br>n-1. HidKeyboardKeyN<br>n. HidKeyboardModifierN|keyMod 4 1|
+|keyMulti|Presses several keys at the same time|1. HidKeyboardKey1<br>...<br>n. HidKeyboardKeyN|keyMulti 224 226 23|
 
 
 ## Screen Control
