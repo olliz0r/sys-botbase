@@ -89,7 +89,7 @@ See https://switchbrew.github.io/libnx/hid_8h.html HidKeyboardKey and HidKeyboar
 
 |Command|Description|Parameters|Usage|
 |--|--|--|--|
-|getTitleId|Returns TitleId of application currently running|none|getTitleId|
+|getTitleID|Returns TitleId of application currently running|none|getTitleID|
 |getTitleVersion|Returns Version of Title currently running|none|getTitleVersion|
 |getSystemLanguage|Returns Language of the Switch OS|none|getSystemLanguage|
 |getBuildID|Returns BuildID of the Application running|none|getBuildID|
