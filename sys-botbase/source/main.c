@@ -953,7 +953,7 @@ int main()
 
     flashLed();
 
-    while (appletMainLoop())
+    while (true)
     {
         poll(pfds, fd_count, -1);
 		mutexLock(&freezeMutex);
