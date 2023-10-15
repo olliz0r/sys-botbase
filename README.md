@@ -23,6 +23,7 @@ This project was created for the purpose of development for bot automation. The 
 Download [latest release](https://github.com/olliz0r/sys-botbase/releases/latest) and extract into your Nintendo Switch SD card. Restart your switch. 
 
 When installed correctly, sys-botbase will make your docked joy-con's home button glow on switch bootup. If this does not happen, sys-botbase is not installed correctly.
+
 ![](joycon-glow.gif)
 
 ## Credits
