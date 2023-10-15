@@ -15,7 +15,7 @@
 #include <poll.h>
 
 #define TITLE_ID 0x430000000000000B
-#define HEAP_SIZE 0x00300000
+#define HEAP_SIZE 0x00400000
 #define THREAD_SIZE 0x1A000
 
 typedef enum {
