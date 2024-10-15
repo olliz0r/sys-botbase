@@ -1,0 +1,8 @@
+version: "2"
+
+services:
+  devkit:
+    image: devkitpro/devkita64:latest
+    volumes:
+      - ".:/code"
+    command: bash -c "dkp-pacman -Syu --noconfirm && cd /code && make clean && make -j8"

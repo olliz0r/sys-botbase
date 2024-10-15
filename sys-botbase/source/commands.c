@@ -436,13 +436,13 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
             if (memcmp(states[i].keys, states[i+1].keys, sizeof(u64) * 4) == 0 && states[i].modifiers == states[i+1].modifiers)
             {
                 hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
-                svcSleepThread(pollRate * 1e+6L);
+                svcSleepThread(keyPressSleepTime * 1e+6L);
             }
         }
         else
         {
             hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
-            svcSleepThread(pollRate * 1e+6L);
+            svcSleepThread(keyPressSleepTime * 1e+6L);
         }
     }
 
