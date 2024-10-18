@@ -20,7 +20,7 @@ A Nintendo Switch (CFW) sys-module that allows users to remote control their swi
 This project was created for the purpose of development for bot automation. The creators and maintainers of this project are not liable for any damages caused or bans received. Use at your own risk.
 
 ## Installation
-Download [latest release](https://github.com/olliz0r/sys-botbase/releases/latest) and extract into your Nintendo Switch SD card. Restart your switch. 
+Download [latest release](https://github.com/olliz0r/sys-botbase/releases/latest) and extract into your Nintendo Switch SD card. Merge the `atmosphere` folder with the existing one and place the `sys-botbase.nsp` into the `switch` folder. Restart your switch. 
 
 When installed correctly, sys-botbase will make your docked joy-con's home button glow on switch bootup. If this does not happen, sys-botbase is not installed correctly.
 
