@@ -17,7 +17,7 @@
 #define TITLE_ID 0x430000000000000B
 #define HEAP_SIZE 0x00480000
 #define THREAD_SIZE 0x1A000
-#define VERSION_S "2.4"
+#define VERSION_S "2.41"
 
 typedef enum {
     Active = 0,
