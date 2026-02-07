@@ -11,21 +11,21 @@
 //Controller:
 bool bControllerIsInitialised = false;
 HidDeviceType controllerInitializedType = HidDeviceType_FullKey3;
-HiddbgHdlsHandle controllerHandle = {0};
-HiddbgHdlsDeviceInfo controllerDevice = {0};
-HiddbgHdlsState controllerState = {0};
+HiddbgHdlsHandle controllerHandle = { 0 };
+HiddbgHdlsDeviceInfo controllerDevice = { 0 };
+HiddbgHdlsState controllerState = { 0 };
 
 //Keyboard:
-HiddbgKeyboardAutoPilotState dummyKeyboardState = {0};
+HiddbgKeyboardAutoPilotState dummyKeyboardState = { 0 };
 
 Handle debughandle = 0;
 u64 buttonClickSleepTime = 50;
 u64 keyPressSleepTime = 25;
 u64 pollRate = 17; // polling is linked to screen refresh rate (system UI) or game framerate. Most cases this is 1/60 or 1/30
 u32 fingerDiameter = 50;
-HiddbgHdlsSessionId sessionId = {0};
-bool initflag=0;
-u8 *workmem = NULL;
+HiddbgHdlsSessionId sessionId = { 0 };
+bool initflag = 0;
+u8* workmem = NULL;
 size_t workmem_size = 0x1000;
 
 void attach()
@@ -43,28 +43,29 @@ void attach()
         printf("svcDebugActiveProcess: %d\n", rc);
 }
 
-void detach(){
+void detach() {
     if (debughandle != 0)
         svcCloseHandle(debughandle);
 }
 
-u64 getMainNsoBase(u64 pid){
+u64 getMainNsoBase(u64 pid) {
     LoaderModuleInfo proc_modules[2];
     s32 numModules = 0;
     Result rc = ldrDmntGetProcessModuleInfo(pid, proc_modules, 2, &numModules);
     if (R_FAILED(rc) && debugResultCodes)
         printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
 
-    LoaderModuleInfo *proc_module = 0;
-    if(numModules == 2){
+    LoaderModuleInfo* proc_module = 0;
+    if (numModules == 2) {
         proc_module = &proc_modules[1];
-    }else{
+    }
+    else {
         proc_module = &proc_modules[0];
     }
     return proc_module->base_address;
 }
 
-u64 getHeapBase(Handle handle){
+u64 getHeapBase(Handle handle) {
     u64 heap_base = 0;
     Result rc = svcGetInfo(&heap_base, InfoType_HeapRegionAddress, debughandle, 0);
     if (R_FAILED(rc) && debugResultCodes)
@@ -73,7 +74,7 @@ u64 getHeapBase(Handle handle){
     return heap_base;
 }
 
-u64 getTitleId(u64 pid){
+u64 getTitleId(u64 pid) {
     u64 titleId = 0;
     Result rc = pminfoGetProgramId(&titleId, pid);
     if (R_FAILED(rc) && debugResultCodes)
@@ -81,15 +82,15 @@ u64 getTitleId(u64 pid){
     return titleId;
 }
 
-u64 GetTitleVersion(u64 pid){
+u64 GetTitleVersion(u64 pid) {
     u64 titleV = 0;
     s32 out;
 
     Result rc = nsInitialize();
-	if (R_FAILED(rc)) 
+    if (R_FAILED(rc))
         fatalThrow(rc);
 
-    NsApplicationContentMetaStatus *MetaStatus = malloc(sizeof(NsApplicationContentMetaStatus[100U]));
+    NsApplicationContentMetaStatus* MetaStatus = malloc(sizeof(NsApplicationContentMetaStatus[100U]));
     rc = nsListApplicationContentMetaStatus(getTitleId(pid), 0, MetaStatus, 100, &out);
     if (R_FAILED(rc) && debugResultCodes)
         printf("nsListApplicationContentMetaStatus: %d\n", rc);
@@ -103,7 +104,7 @@ u64 GetTitleVersion(u64 pid){
     return (titleV / 0x10000);
 }
 
-u64 getoutsize(NsApplicationControlData* buf){
+u64 getoutsize(NsApplicationControlData* buf) {
     Result rc = nsInitialize();
     if (R_FAILED(rc))
         fatalThrow(rc);
@@ -117,32 +118,33 @@ u64 getoutsize(NsApplicationControlData* buf){
     nsExit();
     return outsize;
 }
-void getBuildID(MetaData* meta, u64 pid){
+void getBuildID(MetaData* meta, u64 pid) {
     LoaderModuleInfo proc_modules[2];
     s32 numModules = 0;
     Result rc = ldrDmntGetProcessModuleInfo(pid, proc_modules, 2, &numModules);
     if (R_FAILED(rc) && debugResultCodes)
         printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
 
-    LoaderModuleInfo *proc_module = 0;
-    if(numModules == 2){
+    LoaderModuleInfo* proc_module = 0;
+    if (numModules == 2) {
         proc_module = &proc_modules[1];
-    }else{
+    }
+    else {
         proc_module = &proc_modules[0];
     }
     memcpy(meta->buildID, proc_module->build_id, 0x20);
 }
 
-MetaData getMetaData(){
+MetaData getMetaData() {
     MetaData meta;
     attach();
-    u64 pid = 0;    
+    u64 pid = 0;
     Result rc = pmdmntGetApplicationProcessId(&pid);
     if (R_FAILED(rc) && debugResultCodes)
         printf("pmdmntGetApplicationProcessId: %d\n", rc);
-    
+
     meta.main_nso_base = getMainNsoBase(pid);
-    meta.heap_base =  getHeapBase(debughandle);
+    meta.heap_base = getHeapBase(debughandle);
     meta.titleID = getTitleId(pid);
     meta.titleVersion = GetTitleVersion(pid);
     getBuildID(&meta, pid);
@@ -153,7 +155,7 @@ MetaData getMetaData(){
 
 bool getIsProgramOpen(u64 id)
 {
-    u64 pid = 0;    
+    u64 pid = 0;
     Result rc = pmdmntGetProcessId(&pid, id);
     if (pid == 0 || R_FAILED(rc))
         return false;
@@ -163,32 +165,32 @@ bool getIsProgramOpen(u64 id)
 
 void initController()
 {
-    if(bControllerIsInitialised) return;
+    if (bControllerIsInitialised) return;
     //taken from switchexamples github
     Result rc = hiddbgInitialize();
-	
-	//old
+
+    //old
     //if (R_FAILED(rc) && debugResultCodes)
     //printf("hiddbgInitialize: %d\n", rc);
-    
-	//new
-	if (R_FAILED(rc) && debugResultCodes) {
+
+    //new
+    if (R_FAILED(rc) && debugResultCodes) {
         printf("hiddbgInitialize(): 0x%x\n", rc);
     }
     else {
         workmem = aligned_alloc(0x1000, workmem_size);
         if (workmem) initflag = 1;
         else printf("workmem alloc failed\n");
-    }    
-	
-	// Set the controller type to Pro-Controller, and set the npadInterfaceType.
+    }
+
+    // Set the controller type to Pro-Controller, and set the npadInterfaceType.
     controllerDevice.deviceType = controllerInitializedType;
     controllerDevice.npadInterfaceType = HidNpadInterfaceType_Bluetooth;
     // Set the controller colors. The grip colors are for Pro-Controller on [9.0.0+].
-    controllerDevice.singleColorBody = RGBA8_MAXALPHA(255,255,255);
-    controllerDevice.singleColorButtons = RGBA8_MAXALPHA(0,0,0);
-    controllerDevice.colorLeftGrip = RGBA8_MAXALPHA(230,255,0);
-    controllerDevice.colorRightGrip = RGBA8_MAXALPHA(0,40,20);
+    controllerDevice.singleColorBody = RGBA8_MAXALPHA(255, 255, 255);
+    controllerDevice.singleColorButtons = RGBA8_MAXALPHA(0, 0, 0);
+    controllerDevice.colorLeftGrip = RGBA8_MAXALPHA(230, 255, 0);
+    controllerDevice.colorRightGrip = RGBA8_MAXALPHA(0, 40, 20);
 
     // Setup example controller state.
     controllerState.battery_level = 4; // Set battery charge to full.
@@ -219,7 +221,7 @@ void detachController()
     if (R_FAILED(rc) && debugResultCodes)
         printf("hiddbgReleaseHdlsWorkBuffer: %d\n", rc);
     hiddbgExit();
-	free(workmem);
+    free(workmem);
     bControllerIsInitialised = false;
 
     sessionId.id = 0;
@@ -234,14 +236,14 @@ void poke(u64 offset, u64 size, u8* val)
 
 void writeMem(u64 offset, u64 size, u8* val)
 {
-	Result rc = svcWriteDebugProcessMemory(debughandle, val, offset, size);
+    Result rc = svcWriteDebugProcessMemory(debughandle, val, offset, size);
     if (R_FAILED(rc) && debugResultCodes)
         printf("svcWriteDebugProcessMemory: %d\n", rc);
 }
 
 void peek(u64 offset, u64 size)
 {
-    u8 *out = malloc(sizeof(u8) * size);
+    u8* out = malloc(sizeof(u8) * size);
     attach();
     Result rc = readMem(out, offset, size);
     if (R_FAILED(rc))
@@ -266,7 +268,7 @@ void peekInfinite(u64 offset, u64 size)
     u64 sizeRemainder = size;
     u64 totalFetched = 0;
     u64 i;
-    u8 *out = malloc(sizeof(u8) * MAX_LINE_LENGTH);
+    u8* out = malloc(sizeof(u8) * MAX_LINE_LENGTH);
 
     attach();
     while (sizeRemainder > 0)
@@ -298,8 +300,8 @@ void peekMulti(u64* offset, u64* size, u64 count)
     u64 totalSize = 0;
     for (int i = 0; i < count; i++)
         totalSize += size[i];
-    
-    u8 *out = malloc(sizeof(u8) * totalSize);
+
+    u8* out = malloc(sizeof(u8) * totalSize);
     u64 ofs = 0;
     attach();
     for (int i = 0; i < count; i++)
@@ -362,15 +364,15 @@ void setStickState(int side, int dxVal, int dyVal)
 {
     initController();
     if (side == JOYSTICK_LEFT)
-    {	
+    {
         controllerState.analog_stick_l.x = dxVal;
-		controllerState.analog_stick_l.y = dyVal;
-	}
-	else
-	{
-		controllerState.analog_stick_r.x = dxVal;
-		controllerState.analog_stick_r.y = dyVal;
-	}
+        controllerState.analog_stick_l.y = dyVal;
+    }
+    else
+    {
+        controllerState.analog_stick_r.x = dxVal;
+        controllerState.analog_stick_r.y = dyVal;
+    }
     hiddbgSetHdlsState(controllerHandle, &controllerState);
 }
 
@@ -379,22 +381,22 @@ void reverseArray(u8* arr, int start, int end)
     int temp;
     while (start < end)
     {
-        temp = arr[start];   
+        temp = arr[start];
         arr[start] = arr[end];
         arr[end] = temp;
         start++;
         end--;
-    }   
-} 
+    }
+}
 
-u64 followMainPointer(s64* jumps, size_t count) 
+u64 followMainPointer(s64* jumps, size_t count)
 {
-	u64 offset;
+    u64 offset;
     u64 size = sizeof offset;
-	u8 *out = malloc(size);
-	MetaData meta = getMetaData(); 
-	
-	attach();
+    u8* out = malloc(size);
+    MetaData meta = getMetaData();
+
+    attach();
     Result rc = readMem(out, meta.main_nso_base + jumps[0], size);
     if (R_FAILED(rc))
     {
@@ -402,11 +404,11 @@ u64 followMainPointer(s64* jumps, size_t count)
         free(out);
         return 0;
     }
-	offset = *(u64*)out;
+    offset = *(u64*)out;
 
-	int i;
+    int i;
     for (i = 1; i < count; ++i)
-	{
+    {
         rc = readMem(out, offset + jumps[i], size);
         if (R_FAILED(rc))
             break;
@@ -414,10 +416,10 @@ u64 followMainPointer(s64* jumps, size_t count)
         // This traversal resulted in an error
         if (offset == 0)
             break;
-	}
-	detach();
-	free(out);
-	
+    }
+    detach();
+    free(out);
+
     return offset;
 }
 
@@ -439,19 +441,19 @@ void touch(HidTouchState* state, u64 sequentialCount, u64 holdTime, bool hold, u
             break;
     }
 
-    if(hold) // send finger release event
+    if (hold) // send finger release event
     {
         hiddbgSetTouchScreenAutoPilotState(NULL, 0);
         svcSleepThread(pollRate * 1e+6L);
     }
-    
+
     hiddbgUnsetTouchScreenAutoPilotState();
 }
 
 void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
 {
     initController();
-    HiddbgKeyboardAutoPilotState tempState = {0};
+    HiddbgKeyboardAutoPilotState tempState = { 0 };
     u32 i;
     for (i = 0; i < sequentialCount; i++)
     {
@@ -460,9 +462,9 @@ void key(HiddbgKeyboardAutoPilotState* states, u64 sequentialCount)
         hiddbgSetKeyboardAutoPilotState(&tempState);
         svcSleepThread(keyPressSleepTime * 1e+6L);
 
-        if (i != (sequentialCount-1))
+        if (i != (sequentialCount - 1))
         {
-            if (memcmp(states[i].keys, states[i+1].keys, sizeof(u64) * 4) == 0 && states[i].modifiers == states[i+1].modifiers)
+            if (memcmp(states[i].keys, states[i + 1].keys, sizeof(u64) * 4) == 0 && states[i].modifiers == states[i + 1].modifiers)
             {
                 hiddbgSetKeyboardAutoPilotState(&dummyKeyboardState);
                 svcSleepThread(pollRate * 1e+6L);
@@ -487,7 +489,7 @@ void clickSequence(char* seq, u8* token)
     const char startLStick = '%';
     const char startRStick = '&';
     char* command = strtok(seq, &delim);
-    HidNpadButton currKey = {0};
+    HidNpadButton currKey = { 0 };
     u64 currentWait = 0;
 
     initController();
@@ -500,28 +502,28 @@ void clickSequence(char* seq, u8* token)
         {
             // l stick
             s64 x = parseStringToSignedLong(&command[1]);
-            if(x > JOYSTICK_MAX) x = JOYSTICK_MAX; 
-            if(x < JOYSTICK_MIN) x = JOYSTICK_MIN; 
+            if (x > JOYSTICK_MAX) x = JOYSTICK_MAX;
+            if (x < JOYSTICK_MIN) x = JOYSTICK_MIN;
             s64 y = 0;
             command = strtok(NULL, &delim);
             if (command != NULL)
                 y = parseStringToSignedLong(command);
-            if(y > JOYSTICK_MAX) y = JOYSTICK_MAX;
-            if(y < JOYSTICK_MIN) y = JOYSTICK_MIN;
+            if (y > JOYSTICK_MAX) y = JOYSTICK_MAX;
+            if (y < JOYSTICK_MIN) y = JOYSTICK_MIN;
             setStickState(JOYSTICK_LEFT, (s32)x, (s32)y);
         }
         else if (!strncmp(command, &startRStick, 1))
         {
             // r stick
             s64 x = parseStringToSignedLong(&command[1]);
-            if(x > JOYSTICK_MAX) x = JOYSTICK_MAX; 
-            if(x < JOYSTICK_MIN) x = JOYSTICK_MIN; 
+            if (x > JOYSTICK_MAX) x = JOYSTICK_MAX;
+            if (x < JOYSTICK_MIN) x = JOYSTICK_MIN;
             s64 y = 0;
             command = strtok(NULL, &delim);
             if (command != NULL)
                 y = parseStringToSignedLong(command);
-            if(y > JOYSTICK_MAX) y = JOYSTICK_MAX;
-            if(y < JOYSTICK_MIN) y = JOYSTICK_MIN;
+            if (y > JOYSTICK_MAX) y = JOYSTICK_MAX;
+            if (y < JOYSTICK_MIN) y = JOYSTICK_MIN;
             setStickState(JOYSTICK_RIGHT, (s32)x, (s32)y);
         }
         else if (!strncmp(command, &startPress, 1))
@@ -529,13 +531,13 @@ void clickSequence(char* seq, u8* token)
             // press
             currKey = parseStringToButton(&command[1]);
             press(currKey);
-        }  
+        }
         else if (!strncmp(command, &startRelease, 1))
         {
             // release
             currKey = parseStringToButton(&command[1]);
             release(currKey);
-        }   
+        }
         else if (!strncmp(command, &startWait, 1))
         {
             // wait
