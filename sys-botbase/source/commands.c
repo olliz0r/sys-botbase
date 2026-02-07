@@ -243,8 +243,13 @@ void peek(u64 offset, u64 size)
 {
     u8 *out = malloc(sizeof(u8) * size);
     attach();
-    readMem(out, offset, size);
-    detach();
+    Result rc = readMem(out, offset, size);
+    if (R_FAILED(rc))
+    {
+        detach();
+        free(out);
+        return;
+    }
 
     u64 i;
     for (i = 0; i < size; i++)
@@ -252,6 +257,7 @@ void peek(u64 offset, u64 size)
         printf("%02X", out[i]);
     }
     printf("\n");
+    detach();
     free(out);
 }
 
@@ -267,7 +273,14 @@ void peekInfinite(u64 offset, u64 size)
     {
         u64 thisBuffersize = sizeRemainder > MAX_LINE_LENGTH ? MAX_LINE_LENGTH : sizeRemainder;
         sizeRemainder -= thisBuffersize;
-        readMem(out, offset + totalFetched, thisBuffersize);
+        Result rc = readMem(out, offset + totalFetched, thisBuffersize);
+        if (R_FAILED(rc))
+        {
+            detach();
+            free(out);
+            return;
+        }
+
         for (i = 0; i < thisBuffersize; i++)
         {
             printf("%02X", out[i]);
@@ -291,10 +304,15 @@ void peekMulti(u64* offset, u64* size, u64 count)
     attach();
     for (int i = 0; i < count; i++)
     {
-        readMem(out + ofs, offset[i], size[i]);
+        Result rc = readMem(out + ofs, offset[i], size[i]);
+        if (R_FAILED(rc))
+        {
+            detach();
+            free(out);
+            return;
+        }
         ofs += size[i];
     }
-    detach();
 
     u64 i;
     for (i = 0; i < totalSize; i++)
@@ -302,14 +320,16 @@ void peekMulti(u64* offset, u64* size, u64 count)
         printf("%02X", out[i]);
     }
     printf("\n");
+    detach();
     free(out);
 }
 
-void readMem(u8* out, u64 offset, u64 size)
+Result readMem(u8* out, u64 offset, u64 size)
 {
-	Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
+    Result rc = svcReadDebugProcessMemory(out, debughandle, offset, size);
     if (R_FAILED(rc) && debugResultCodes)
         printf("svcReadDebugProcessMemory: %d\n", rc);
+    return rc;
 }
 
 void click(HidNpadButton btn)
@@ -375,14 +395,23 @@ u64 followMainPointer(s64* jumps, size_t count)
 	MetaData meta = getMetaData(); 
 	
 	attach();
-	readMem(out, meta.main_nso_base + jumps[0], size);
+    Result rc = readMem(out, meta.main_nso_base + jumps[0], size);
+    if (R_FAILED(rc))
+    {
+        detach();
+        free(out);
+        return 0;
+    }
 	offset = *(u64*)out;
+
 	int i;
     for (i = 1; i < count; ++i)
 	{
-		readMem(out, offset + jumps[i], size);
-		offset = *(u64*)out;
-        // this traversal resulted in an error
+        rc = readMem(out, offset + jumps[i], size);
+        if (R_FAILED(rc))
+            break;
+        offset = *(u64*)out;
+        // This traversal resulted in an error
         if (offset == 0)
             break;
 	}
