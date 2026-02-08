@@ -54,7 +54,7 @@ void writeMem(u64 offset, u64 size, u8* val);
 void peek(u64 offset, u64 size);
 void peekInfinite(u64 offset, u64 size);
 void peekMulti(u64* offset, u64* size, u64 count);
-void readMem(u8* out, u64 offset, u64 size);
+Result readMem(u8* out, u64 offset, u64 size);
 void click(HidNpadButton btn);
 void press(HidNpadButton btn);
 void release(HidNpadButton btn);

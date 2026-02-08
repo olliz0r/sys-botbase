@@ -2,11 +2,11 @@
 #define FREEZE_DIC_LENGTH 255
 
 typedef struct {
-	char state;
-	u64 address;
-	u8* vData;
-	u64 size;
-	u64 titleId;
+    char state;
+    u64 address;
+    u8* vData;
+    u64 size;
+    u64 titleId;
 } FreezeBlock;
 
 extern FreezeBlock* freezes;

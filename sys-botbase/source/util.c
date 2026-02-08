@@ -65,7 +65,7 @@ int setupServerSocket()
     server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons(6000);
 
-    while (bind(lissock, (struct sockaddr *)&server, sizeof(server)) < 0)
+    while (bind(lissock, (struct sockaddr*)&server, sizeof(server)) < 0)
     {
         svcSleepThread(1e+9L);
     }
@@ -73,9 +73,9 @@ int setupServerSocket()
     return lissock;
 }
 
-u64 parseStringToInt(char* arg){
-    if(strlen(arg) > 2){
-        if(arg[1] == 'x'){
+u64 parseStringToInt(char* arg) {
+    if (strlen(arg) > 2) {
+        if (arg[1] == 'x') {
             u64 ret = strtoul(arg, NULL, 16);
             return ret;
         }
@@ -84,9 +84,9 @@ u64 parseStringToInt(char* arg){
     return ret;
 }
 
-s64 parseStringToSignedLong(char* arg){
-    if(strlen(arg) > 2){
-        if(arg[1] == 'x' || arg[2] == 'x'){
+s64 parseStringToSignedLong(char* arg) {
+    if (strlen(arg) > 2) {
+        if (arg[1] == 'x' || arg[2] == 'x') {
             s64 ret = strtol(arg, NULL, 16);
             return ret;
         }
@@ -97,12 +97,12 @@ s64 parseStringToSignedLong(char* arg){
 
 u8* parseStringToByteBuffer(char* arg, u64* size)
 {
-    char toTranslate[3] = {0};
+    char toTranslate[3] = { 0 };
     int length = strlen(arg);
     bool isHex = false;
 
-    if(length > 2){
-        if(arg[1] == 'x'){
+    if (length > 2) {
+        if (arg[1] == 'x') {
             isHex = true;
             length -= 2;
             arg = &arg[2]; //cut off 0x
@@ -112,29 +112,32 @@ u8* parseStringToByteBuffer(char* arg, u64* size)
     bool isFirst = true;
     bool isOdd = (length % 2 == 1);
     u64 bufferSize = length / 2;
-    if(isOdd) bufferSize++;
-    u8 *buffer = malloc(bufferSize);
+    if (isOdd) bufferSize++;
+    u8* buffer = malloc(bufferSize);
 
 
 
     u64 i;
-    for (i = 0; i < bufferSize; i++){
-        if(isOdd){
-            if(isFirst){
+    for (i = 0; i < bufferSize; i++) {
+        if (isOdd) {
+            if (isFirst) {
                 toTranslate[0] = '0';
                 toTranslate[1] = arg[i];
-            }else{
+            }
+            else {
                 toTranslate[0] = arg[(2 * i) - 1];
                 toTranslate[1] = arg[(2 * i)];
             }
-        }else{
-            toTranslate[0] = arg[i*2];
-            toTranslate[1] = arg[(i*2) + 1];      
+        }
+        else {
+            toTranslate[0] = arg[i * 2];
+            toTranslate[1] = arg[(i * 2) + 1];
         }
         isFirst = false;
-        if(isHex){
+        if (isHex) {
             buffer[i] = strtoul(toTranslate, NULL, 16);
-        }else{
+        }
+        else {
             buffer[i] = strtoul(toTranslate, NULL, 10);
         }
     }
@@ -147,7 +150,7 @@ HidNpadButton parseStringToButton(char* arg)
     if (strcmp(arg, "A") == 0)
     {
         return HidNpadButton_A;
-    } 
+    }
     else if (strcmp(arg, "B") == 0)
     {
         return HidNpadButton_B;
@@ -228,24 +231,24 @@ HidNpadButton parseStringToButton(char* arg)
     return HidNpadButton_A; //I guess lol
 }
 
-Result capsscCaptureForDebug(void *buffer, size_t buffer_size, u64 *size) {
+Result capsscCaptureForDebug(void* buffer, size_t buffer_size, u64* size) {
     struct {
         u32 a;
         u64 b;
-    } in = {0, 10000000000};
+    } in = { 0, 10000000000 };
     return serviceDispatchInOut(capsscGetServiceSession(), 1204, in, *size,
-        .buffer_attrs = {SfBufferAttr_HipcMapTransferAllowsNonSecure | SfBufferAttr_HipcMapAlias | SfBufferAttr_Out},
+        .buffer_attrs = { SfBufferAttr_HipcMapTransferAllowsNonSecure | SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
         .buffers = { { buffer, buffer_size } },
-    );
+        );
 }
 
 static void sendPatternStatic(const HidsysNotificationLedPattern* pattern, const HidNpadIdType idType)
 {
     s32 total_entries;
-    HidsysUniquePadId unique_pad_ids[2]={0};
+    HidsysUniquePadId unique_pad_ids[2] = { 0 };
 
     Result rc = hidsysGetUniquePadsFromNpad(idType, unique_pad_ids, 2, &total_entries);
-    if (R_FAILED(rc)) 
+    if (R_FAILED(rc))
         return; // probably incompatible or no pads connected
 
     for (int i = 0; i < total_entries; i++)
