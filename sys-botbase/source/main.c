@@ -162,6 +162,11 @@ int argmain(int argc, char** argv)
             return 0;
 
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
@@ -174,6 +179,11 @@ int argmain(int argc, char** argv)
             return 0;
 
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
 
         u64 itemCount = (argc - 1) / 2;
         u64 offsets[itemCount];
@@ -220,6 +230,11 @@ int argmain(int argc, char** argv)
             return 0;
 
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = parseStringToInt(argv[2]);
@@ -232,6 +247,11 @@ int argmain(int argc, char** argv)
             return 0;
 
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
 
         u64 itemCount = (argc - 1) / 2;
         u64 offsets[itemCount];
@@ -252,6 +272,11 @@ int argmain(int argc, char** argv)
             return 0;
 
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
@@ -278,6 +303,11 @@ int argmain(int argc, char** argv)
             return 0;
 
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
@@ -304,6 +334,10 @@ int argmain(int argc, char** argv)
 
         u64 sizeArg = strlen(argv[1]) + 1;
         char* seqNew = malloc(sizeArg);
+        if (seqNew == NULL) {
+            printf("\n");
+            return 0;
+        }
         strcpy(seqNew, argv[1]);
         makeClickSeq(seqNew);
     }
@@ -461,11 +495,21 @@ int argmain(int argc, char** argv)
 
     if (!strcmp(argv[0], "getTitleID")) {
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
         printf("%016lX\n", meta.titleID);
     }
 
     if (!strcmp(argv[0], "getTitleVersion")) {
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
         printf("%016lX\n", meta.titleVersion);
     }
 
@@ -481,17 +525,32 @@ int argmain(int argc, char** argv)
 
     if (!strcmp(argv[0], "getMainNsoBase")) {
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
         printf("%016lX\n", meta.main_nso_base);
     }
 
     if (!strcmp(argv[0], "getBuildID")) {
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
         printf("%02x%02x%02x%02x%02x%02x%02x%02x\n", meta.buildID[0], meta.buildID[1], meta.buildID[2], meta.buildID[3], meta.buildID[4], meta.buildID[5], meta.buildID[6], meta.buildID[7]);
 
     }
 
     if (!strcmp(argv[0], "getHeapBase")) {
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
         printf("%016lX\n", meta.heap_base);
     }
 
@@ -574,6 +633,11 @@ int argmain(int argc, char** argv)
         {
             solved += finalJump;
             MetaData meta = getMetaData();
+            if (meta.main_nso_base == 0)
+            {
+                printf("\n");
+                return 0;
+            }
             solved -= meta.heap_base;
         }
         printf("%016lX\n", solved);
@@ -674,6 +738,11 @@ int argmain(int argc, char** argv)
             return 0;
 
         MetaData meta = getMetaData();
+        if (meta.main_nso_base == 0)
+        {
+            printf("\n");
+            return 0;
+        }
 
         u64 offset = parseStringToInt(argv[1]);
         u64 size = 0;
