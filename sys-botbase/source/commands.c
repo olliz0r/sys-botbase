@@ -52,8 +52,11 @@ u64 getMainNsoBase(u64 pid) {
     LoaderModuleInfo proc_modules[2];
     s32 numModules = 0;
     Result rc = ldrDmntGetProcessModuleInfo(pid, proc_modules, 2, &numModules);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
+    if (R_FAILED(rc)) {
+        if (debugResultCodes)
+            printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
+        return 0;
+    }
 
     LoaderModuleInfo* proc_module = 0;
     if (numModules == 2) {
@@ -91,6 +94,12 @@ u64 GetTitleVersion(u64 pid) {
         fatalThrow(rc);
 
     NsApplicationContentMetaStatus* MetaStatus = malloc(sizeof(NsApplicationContentMetaStatus[100U]));
+    if (MetaStatus == NULL) {
+        // Handle allocation failure
+        printf("Failed to allocate memory for MetaStatus\n");
+        nsExit();
+        return 0; // or another appropriate error value
+    }
     rc = nsListApplicationContentMetaStatus(getTitleId(pid), 0, MetaStatus, 100, &out);
     if (R_FAILED(rc) && debugResultCodes)
         printf("nsListApplicationContentMetaStatus: %d\n", rc);
@@ -118,12 +127,17 @@ u64 getoutsize(NsApplicationControlData* buf) {
     nsExit();
     return outsize;
 }
+
 void getBuildID(MetaData* meta, u64 pid) {
     LoaderModuleInfo proc_modules[2];
     s32 numModules = 0;
     Result rc = ldrDmntGetProcessModuleInfo(pid, proc_modules, 2, &numModules);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
+    if (R_FAILED(rc)) {
+        if (debugResultCodes)
+            printf("ldrDmntGetProcessModuleInfo: %d\n", rc);
+        memset(meta->buildID, 0, 0x20);
+        return;
+    }
 
     LoaderModuleInfo* proc_module = 0;
     if (numModules == 2) {
@@ -140,8 +154,13 @@ MetaData getMetaData() {
     attach();
     u64 pid = 0;
     Result rc = pmdmntGetApplicationProcessId(&pid);
-    if (R_FAILED(rc) && debugResultCodes)
-        printf("pmdmntGetApplicationProcessId: %d\n", rc);
+    if (R_FAILED(rc)) {
+        if (debugResultCodes)
+            printf("pmdmntGetApplicationProcessId: %d\n", rc);
+        detach();
+        memset(&meta, 0, sizeof(meta));
+        return meta;
+    }
 
     meta.main_nso_base = getMainNsoBase(pid);
     meta.heap_base = getHeapBase(debughandle);
@@ -244,6 +263,10 @@ void writeMem(u64 offset, u64 size, u8* val)
 void peek(u64 offset, u64 size)
 {
     u8* out = malloc(sizeof(u8) * size);
+    if (out == NULL) {
+        printf("\n");
+        return;
+    }
     attach();
     Result rc = readMem(out, offset, size);
     if (R_FAILED(rc))
@@ -270,6 +293,10 @@ void peekInfinite(u64 offset, u64 size)
     u64 totalFetched = 0;
     u64 i;
     u8* out = malloc(sizeof(u8) * MAX_LINE_LENGTH);
+    if (out == NULL) {
+        printf("\n");
+        return;
+    }
 
     attach();
     while (sizeRemainder > 0)
@@ -292,8 +319,8 @@ void peekInfinite(u64 offset, u64 size)
 
         totalFetched += thisBuffersize;
     }
-    detach();
     printf("\n");
+    detach();
     free(out);
 }
 
